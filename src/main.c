@@ -8,13 +8,13 @@
 
 #include "compat.h"
 #include "joystick.h"
+#include "hwinit.h"
 #include "usb_setup.h"
 
 int main(void)
 {
     hw_init();
     usb_setup();
-
 
     systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
     /* SysTick interrupt every N clock pulses: set reload to N-1 */
@@ -29,6 +29,30 @@ int main(void)
 uint8_t usbbuf[0x40];
 struct ControllerDataReport controllerDataReport;
 uint8_t tick = 0;
+
+void dump_hex(const void *data, size_t size)
+{
+    char ascii[0x40];
+    char *ptr = ascii;
+    size_t i, j;
+    size = max(size, 12);
+    for (i = 0; i < size; ++i)
+    {
+        char b = ((unsigned char *)data)[i];
+        *ptr++ = (HEX_CHAR((b >> 4) & 0xf));
+        *ptr++ = (HEX_CHAR(b & 0xf));
+        *ptr++ = ' ';
+    }
+
+    *ptr++ = '\0';
+    usb_send_serial_data(ptr, ptr - ascii);
+}
+
+void hid_rx_cb(uint8_t *buf, uint16_t len)
+{
+    // dump_hex(*buf, len);
+}
+
 void sys_tick_handler(void)
 {
     static int x = 0;
@@ -57,7 +81,7 @@ void sys_tick_handler(void)
         controllerDataReport.controller_data.dpad_right = 1;
     }
 
-    usb_send_serial_data("Bim\0", 4);
+   // usb_send_serial_data("Bim\0", 4);
 
     memcpy(&usbbuf[1], &controllerDataReport, sizeof(struct ControllerDataReport));
     usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);

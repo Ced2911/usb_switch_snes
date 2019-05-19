@@ -6,8 +6,7 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/hid.h>
 
-// #define INCLUDE_DFU_INTERFACE
-#define INCLUDE_CDC_INTERFACE
+#include "usb_setup.h"
 
 #ifdef INCLUDE_CDC_INTERFACE
 #include <libopencm3/usb/cdc.h>
@@ -224,22 +223,23 @@ static const struct usb_endpoint_descriptor comm_endp[] = {{
     .bInterval = 255,
 }};
 
-static const struct usb_endpoint_descriptor data_endp[] = {{
-                                                               .bLength = USB_DT_ENDPOINT_SIZE,
-                                                               .bDescriptorType = USB_DT_ENDPOINT,
-                                                               .bEndpointAddress = ENDPOINT_CDC_DATA_OUT,
-                                                               .bmAttributes = USB_ENDPOINT_ATTR_BULK,
-                                                               .wMaxPacketSize = 64,
-                                                               .bInterval = 1,
-                                                           },
-                                                           {
-                                                               .bLength = USB_DT_ENDPOINT_SIZE,
-                                                               .bDescriptorType = USB_DT_ENDPOINT,
-                                                               .bEndpointAddress = ENDPOINT_CDC_DATA_IN,
-                                                               .bmAttributes = USB_ENDPOINT_ATTR_BULK,
-                                                               .wMaxPacketSize = 64,
-                                                               .bInterval = 1,
-                                                           }};
+static const struct usb_endpoint_descriptor data_endp[] = {
+    {
+        .bLength = USB_DT_ENDPOINT_SIZE,
+        .bDescriptorType = USB_DT_ENDPOINT,
+        .bEndpointAddress = ENDPOINT_CDC_DATA_OUT,
+        .bmAttributes = USB_ENDPOINT_ATTR_BULK,
+        .wMaxPacketSize = 64,
+        .bInterval = 1,
+    },
+    {
+        .bLength = USB_DT_ENDPOINT_SIZE,
+        .bDescriptorType = USB_DT_ENDPOINT,
+        .bEndpointAddress = ENDPOINT_CDC_DATA_IN,
+        .bmAttributes = USB_ENDPOINT_ATTR_BULK,
+        .wMaxPacketSize = 64,
+        .bInterval = 1,
+    }};
 
 static const struct
 {
@@ -508,13 +508,26 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 
 #endif
 
+static void hid_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
+{
+    (void)ep;
+    (void)usbd_dev;
+    /*
+
+    uint8_t buf[0x40];
+    int len = usbd_ep_read_packet(usbd_dev, ENDPOINT_CDC_DATA_OUT, buf, 0x40);
+
+    hid_rx_cb(len, len);
+    */
+}
+
 static void hid_set_config(usbd_device *dev, uint16_t wValue)
 {
     (void)wValue;
     (void)dev;
 
     usbd_ep_setup(dev, ENDPOINT_HID_IN, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, NULL);
-    usbd_ep_setup(dev, ENDPOINT_HID_OUT, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, NULL);
+    usbd_ep_setup(dev, ENDPOINT_HID_OUT, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, NULL/*hid_data_rx_cb*/);
 
 #ifdef INCLUDE_CDC_INTERFACE
     usbd_ep_setup(usbd_dev, ENDPOINT_CDC_DATA_OUT, USB_ENDPOINT_ATTR_BULK, 0x40, cdcacm_data_rx_cb);
@@ -542,7 +555,6 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
         USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
         cdcacm_control_request);
 #endif
-
 }
 
 uint32_t usb_send_serial_data(void *buf, int len)
@@ -552,17 +564,18 @@ uint32_t usb_send_serial_data(void *buf, int len)
 #endif
 }
 
-void usb_setup() {
+void usb_setup()
+{
     usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev_descr, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
     usbd_register_set_config_callback(usbd_dev, hid_set_config);
 }
 
-
-void usb_poll() {    
-        usbd_poll(usbd_dev);
+void usb_poll()
+{
+    usbd_poll(usbd_dev);
 }
 
-
-uint16_t usb_write_packet(uint8_t ep, void * buf, uint16_t len) {    
+uint16_t usb_write_packet(uint8_t ep, void *buf, uint16_t len)
+{
     return usbd_ep_write_packet(usbd_dev, ENDPOINT_CDC_DATA_IN, buf, len);
 }
