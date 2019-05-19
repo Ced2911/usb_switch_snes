@@ -34,11 +34,11 @@ void dump_hex(const void *data, size_t size)
 {
     char ascii[0x40];
     char *ptr = ascii;
-    size_t i, j;
+    size_t i;
     size = max(size, 12);
     for (i = 0; i < size; ++i)
     {
-        char b = ((unsigned char *)data)[i];
+        unsigned char b = ((unsigned char *)data)[i];
         *ptr++ = (HEX_CHAR((b >> 4) & 0xf));
         *ptr++ = (HEX_CHAR(b & 0xf));
         *ptr++ = ' ';
@@ -50,7 +50,7 @@ void dump_hex(const void *data, size_t size)
 
 void hid_rx_cb(uint8_t *buf, uint16_t len)
 {
-    // dump_hex(*buf, len);
+    dump_hex(*buf, len);
 }
 
 void sys_tick_handler(void)
