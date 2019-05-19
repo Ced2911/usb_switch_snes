@@ -37,7 +37,6 @@
 #include <libopencm3/usb/dfu.h>
 #endif
 
-
 #define _HID_IFACE_NB 1
 #define _DFU_IFACE_NB 1
 #define _CDC_IFACE_NB 2
@@ -56,7 +55,8 @@
 #define _USB_IFACE_NB (_HID_IFACE_NB + _DFU_IFACE_NB + _CDC_IFACE_NB)
 #endif
 
-enum {
+enum
+{
     ENDPOINT_HID_IN = 0x81,
     ENDPOINT_HID_OUT = 0x01,
     ENDPOINT_CDC_COMM_IN = 0x83,
@@ -205,7 +205,7 @@ const struct usb_endpoint_descriptor hid_endpoint[] = {
     {
         .bLength = USB_DT_ENDPOINT_SIZE,
         .bDescriptorType = USB_DT_ENDPOINT,
-        .bEndpointAddress = 0x81,
+        .bEndpointAddress = ENDPOINT_HID_IN,
         .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
         .wMaxPacketSize = 64,
         .bInterval = 0x20,
@@ -213,7 +213,7 @@ const struct usb_endpoint_descriptor hid_endpoint[] = {
     {
         .bLength = USB_DT_ENDPOINT_SIZE,
         .bDescriptorType = USB_DT_ENDPOINT,
-        .bEndpointAddress = 0x01,
+        .bEndpointAddress = ENDPOINT_HID_OUT,
         .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
         .wMaxPacketSize = 64,
         .bInterval = 0x20,
@@ -245,7 +245,7 @@ const struct usb_interface_descriptor hid_iface = {
 static const struct usb_endpoint_descriptor comm_endp[] = {{
     .bLength = USB_DT_ENDPOINT_SIZE,
     .bDescriptorType = USB_DT_ENDPOINT,
-    .bEndpointAddress = 0x83,
+    .bEndpointAddress = ENDPOINT_CDC_COMM_IN,
     .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
     .wMaxPacketSize = 16,
     .bInterval = 255,
@@ -254,7 +254,7 @@ static const struct usb_endpoint_descriptor comm_endp[] = {{
 static const struct usb_endpoint_descriptor data_endp[] = {{
                                                                .bLength = USB_DT_ENDPOINT_SIZE,
                                                                .bDescriptorType = USB_DT_ENDPOINT,
-                                                               .bEndpointAddress = 0x02,
+                                                               .bEndpointAddress = ENDPOINT_CDC_DATA_OUT,
                                                                .bmAttributes = USB_ENDPOINT_ATTR_BULK,
                                                                .wMaxPacketSize = 64,
                                                                .bInterval = 1,
@@ -262,7 +262,7 @@ static const struct usb_endpoint_descriptor data_endp[] = {{
                                                            {
                                                                .bLength = USB_DT_ENDPOINT_SIZE,
                                                                .bDescriptorType = USB_DT_ENDPOINT,
-                                                               .bEndpointAddress = 0x82,
+                                                               .bEndpointAddress = ENDPOINT_CDC_DATA_IN,
                                                                .bmAttributes = USB_ENDPOINT_ATTR_BULK,
                                                                .wMaxPacketSize = 64,
                                                                .bInterval = 1,
@@ -411,7 +411,6 @@ const struct usb_interface ifaces[] = {
 
 };
 
-
 const struct usb_config_descriptor config = {
     .bLength = USB_DT_CONFIGURATION_SIZE,
     .bDescriptorType = USB_DT_CONFIGURATION,
@@ -440,7 +439,7 @@ static enum usbd_request_return_codes hid_control_request(usbd_device *dev, stru
     (void)complete;
     (void)dev;
 
-    if ((req->bmRequestType != 0x81) ||
+    if ((req->bmRequestType != ENDPOINT_HID_IN) ||
         (req->bRequest != USB_REQ_GET_DESCRIPTOR) ||
         (req->wValue != 0x2200))
         return USBD_REQ_NOTSUPP;
@@ -525,11 +524,11 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
     (void)usbd_dev;
 
     char buf[64];
-    int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
+    int len = usbd_ep_read_packet(usbd_dev, ENDPOINT_CDC_DATA_OUT, buf, 64);
 
     if (len)
     {
-        usbd_ep_write_packet(usbd_dev, 0x82, buf, len);
+        usbd_ep_write_packet(usbd_dev, ENDPOINT_CDC_DATA_IN, buf, len);
         buf[len] = 0;
     }
 }
@@ -545,8 +544,8 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
     usbd_ep_setup(dev, ENDPOINT_HID_OUT, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, NULL);
 
 #ifdef INCLUDE_CDC_INTERFACE
-    usbd_ep_setup(usbd_dev, ENDPOINT_CDC_DATA_OUT, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
-    usbd_ep_setup(usbd_dev, ENDPOINT_CDC_DATA_IN, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+    usbd_ep_setup(usbd_dev, ENDPOINT_CDC_DATA_OUT, USB_ENDPOINT_ATTR_BULK, 0x40, cdcacm_data_rx_cb);
+    usbd_ep_setup(usbd_dev, ENDPOINT_CDC_DATA_IN, USB_ENDPOINT_ATTR_BULK, 0x40, NULL);
     usbd_ep_setup(usbd_dev, ENDPOINT_CDC_COMM_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 #endif
 
@@ -578,7 +577,8 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
     systick_counter_enable();
 }
 
-uint32_t usb_send_serial_data(void *buf, int len) {
+uint32_t usb_send_serial_data(void *buf, int len)
+{
 #ifdef INCLUDE_CDC_INTERFACE
     return usbd_ep_write_packet(usbd_dev, ENDPOINT_CDC_DATA_IN, buf, len);
 #endif
