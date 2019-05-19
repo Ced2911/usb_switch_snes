@@ -56,6 +56,14 @@
 #define _USB_IFACE_NB (_HID_IFACE_NB + _DFU_IFACE_NB + _CDC_IFACE_NB)
 #endif
 
+enum {
+    ENDPOINT_HID_IN = 0x81,
+    ENDPOINT_HID_OUT = 0x01,
+    ENDPOINT_CDC_COMM_IN = 0x83,
+    ENDPOINT_CDC_DATA_IN = 0x82,
+    ENDPOINT_CDC_DATA_OUT = 0x02
+};
+
 #include "compat.h"
 #include "joystick.h"
 
@@ -533,12 +541,13 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
     (void)wValue;
     (void)dev;
 
-    usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_INTERRUPT, 4, NULL);
+    usbd_ep_setup(dev, ENDPOINT_HID_IN, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, NULL);
+    usbd_ep_setup(dev, ENDPOINT_HID_OUT, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, NULL);
 
 #ifdef INCLUDE_CDC_INTERFACE
-    usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
-    usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
-    usbd_ep_setup(usbd_dev, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+    usbd_ep_setup(usbd_dev, ENDPOINT_CDC_DATA_OUT, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
+    usbd_ep_setup(usbd_dev, ENDPOINT_CDC_DATA_IN, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+    usbd_ep_setup(usbd_dev, ENDPOINT_CDC_COMM_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 #endif
 
     usbd_register_control_callback(
@@ -569,20 +578,18 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
     systick_counter_enable();
 }
 
+uint32_t usb_send_serial_data(void *buf, int len) {
+#ifdef INCLUDE_CDC_INTERFACE
+    return usbd_ep_write_packet(usbd_dev, ENDPOINT_CDC_DATA_IN, buf, len);
+#endif
+}
+
 int main(void)
 {
     rcc_clock_setup_in_hsi_out_48mhz();
 
     rcc_periph_clock_enable(RCC_GPIOA);
-    /*
-	 * This is a somewhat common cheap hack to trigger device re-enumeration
-	 * on startup.  Assuming a fixed external pullup on D+, (For USB-FS)
-	 * setting the pin to output, and driving it explicitly low effectively
-	 * "removes" the pullup.  The subsequent USB init will "take over" the
-	 * pin, and it will appear as a proper pullup to the host.
-	 * The magic delay is somewhat arbitrary, no guarantees on USBIF
-	 * compliance here, but "it works" in most places.
-	 */
+
     gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
                   GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
     gpio_clear(GPIOA, GPIO12);
@@ -629,6 +636,8 @@ void sys_tick_handler(void)
         controllerDataReport.controller_data.dpad_right = 1;
     }
 
+    usb_send_serial_data("Bim\0", 4);
+
     memcpy(&usbbuf[1], &controllerDataReport, sizeof(struct ControllerDataReport));
-    usbd_ep_write_packet(usbd_dev, 0x81, usbbuf, 0x40);
+    usbd_ep_write_packet(usbd_dev, ENDPOINT_HID_IN, usbbuf, 0x40);
 }
