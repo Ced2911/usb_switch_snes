@@ -25,12 +25,35 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/hid.h>
 
-/* Define this to include the DFU APP interface. */
-#define INCLUDE_DFU_INTERFACE
+// #define INCLUDE_DFU_INTERFACE
+#define INCLUDE_CDC_INTERFACE
+
+#ifdef INCLUDE_CDC_INTERFACE
+#include <libopencm3/usb/cdc.h>
+#endif
 
 #ifdef INCLUDE_DFU_INTERFACE
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/usb/dfu.h>
+#endif
+
+
+#define _HID_IFACE_NB 1
+#define _DFU_IFACE_NB 1
+#define _CDC_IFACE_NB 2
+
+#define INTERFACE_CDC_COMM 1
+#define INTERFACE_CDC_DATA 2
+
+#define _USB_IFACE_NB _HID_IFACE_NB
+#if defined(INCLUDE_DFU_INTERFACE) && !defined(INCLUDE_CDC_INTERFACE)
+#define _USB_IFACE_NB (_HID_IFACE_NB + _DFU_IFACE_NB)
+#endif
+#if !defined(INCLUDE_DFU_INTERFACE) && defined(INCLUDE_CDC_INTERFACE)
+#define _USB_IFACE_NB (_HID_IFACE_NB + _CDC_IFACE_NB)
+#endif
+#if defined(INCLUDE_DFU_INTERFACE) && defined(INCLUDE_CDC_INTERFACE)
+#define _USB_IFACE_NB (_HID_IFACE_NB + _DFU_IFACE_NB + _CDC_IFACE_NB)
 #endif
 
 #include "compat.h"
@@ -54,63 +77,6 @@ const struct usb_device_descriptor dev_descr = {
     .iSerialNumber = 3,
     .bNumConfigurations = 1,
 };
-#if 0
-static const uint8_t hid_report_descriptor[] = {
-    HID_RI_USAGE_PAGE(8, 1), /* Generic Desktop */
-    HID_RI_USAGE(8, 5),      /* Joystick */
-    HID_RI_COLLECTION(8, 1), /* Application */
-    // Buttons (2 bytes)
-    HID_RI_LOGICAL_MINIMUM(8, 0),
-    HID_RI_LOGICAL_MAXIMUM(8, 1),
-    HID_RI_PHYSICAL_MINIMUM(8, 0),
-    HID_RI_PHYSICAL_MAXIMUM(8, 1),
-    // The Switch will allow us to expand the original HORI descriptors to a full 16 buttons.
-    // The Switch will make use of 14 of those buttons.
-    HID_RI_REPORT_SIZE(8, 1),
-    HID_RI_REPORT_COUNT(8, 16),
-    HID_RI_USAGE_PAGE(8, 9),
-    HID_RI_USAGE_MINIMUM(8, 1),
-    HID_RI_USAGE_MAXIMUM(8, 16),
-    HID_RI_INPUT(8, 2),
-    // HAT Switch (1 nibble)
-    HID_RI_USAGE_PAGE(8, 1),
-    HID_RI_LOGICAL_MAXIMUM(8, 7),
-    HID_RI_PHYSICAL_MAXIMUM(16, 315),
-    HID_RI_REPORT_SIZE(8, 4),
-    HID_RI_REPORT_COUNT(8, 1),
-    HID_RI_UNIT(8, 20),
-    HID_RI_USAGE(8, 57),
-    HID_RI_INPUT(8, 66),
-    // There's an additional nibble here that's utilized as part of the Switch Pro Controller.
-    // I believe this -might- be separate U/D/L/R bits on the Switch Pro Controller, as they're utilized as four button descriptors on the Switch Pro Controller.
-    HID_RI_UNIT(8, 0),
-    HID_RI_REPORT_COUNT(8, 1),
-    HID_RI_INPUT(8, 1),
-    // Joystick (4 bytes)
-    HID_RI_LOGICAL_MAXIMUM(16, 255),
-    HID_RI_PHYSICAL_MAXIMUM(16, 255),
-    HID_RI_USAGE(8, 48),
-    HID_RI_USAGE(8, 49),
-    HID_RI_USAGE(8, 50),
-    HID_RI_USAGE(8, 53),
-    HID_RI_REPORT_SIZE(8, 8),
-    HID_RI_REPORT_COUNT(8, 4),
-    HID_RI_INPUT(8, 2),
-    // ??? Vendor Specific (1 byte)
-    // This byte requires additional investigation.
-    HID_RI_USAGE_PAGE(16, 65280),
-    HID_RI_USAGE(8, 32),
-    HID_RI_REPORT_COUNT(8, 1),
-    HID_RI_INPUT(8, 2),
-    // Output (8 bytes)
-    // Original observation of this suggests it to be a mirror of the inputs that we sent.
-    // The Switch requires us to have these descriptors available.
-    HID_RI_USAGE(16, 9761),
-    HID_RI_REPORT_COUNT(8, 8),
-    HID_RI_OUTPUT(8, 2),
-    HID_RI_END_COLLECTION(0),
-};
-#else
 
 static const uint8_t hid_report_descriptor[] = {
     0x05, 0x01,                   // Usage Page (Generic Desktop Ctrls)
@@ -205,7 +171,6 @@ static const uint8_t hid_report_descriptor[] = {
     0x91, 0x83,                   //   Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Volatile)
     0xC0,                         // End Collection
 };
-#endif
 
 static const struct
 {
@@ -263,6 +228,130 @@ const struct usb_interface_descriptor hid_iface = {
     .extralen = sizeof(hid_function),
 };
 
+#ifdef INCLUDE_CDC_INTERFACE
+/*
+ * This notification endpoint isn't implemented. According to CDC spec its
+ * optional, but its absence causes a NULL pointer dereference in Linux
+ * cdc_acm driver.
+ */
+static const struct usb_endpoint_descriptor comm_endp[] = {{
+    .bLength = USB_DT_ENDPOINT_SIZE,
+    .bDescriptorType = USB_DT_ENDPOINT,
+    .bEndpointAddress = 0x83,
+    .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
+    .wMaxPacketSize = 16,
+    .bInterval = 255,
+}};
+
+static const struct usb_endpoint_descriptor data_endp[] = {{
+                                                               .bLength = USB_DT_ENDPOINT_SIZE,
+                                                               .bDescriptorType = USB_DT_ENDPOINT,
+                                                               .bEndpointAddress = 0x02,
+                                                               .bmAttributes = USB_ENDPOINT_ATTR_BULK,
+                                                               .wMaxPacketSize = 64,
+                                                               .bInterval = 1,
+                                                           },
+                                                           {
+                                                               .bLength = USB_DT_ENDPOINT_SIZE,
+                                                               .bDescriptorType = USB_DT_ENDPOINT,
+                                                               .bEndpointAddress = 0x82,
+                                                               .bmAttributes = USB_ENDPOINT_ATTR_BULK,
+                                                               .wMaxPacketSize = 64,
+                                                               .bInterval = 1,
+                                                           }};
+
+static const struct
+{
+    struct usb_cdc_header_descriptor header;
+    struct usb_cdc_call_management_descriptor call_mgmt;
+    struct usb_cdc_acm_descriptor acm;
+    struct usb_cdc_union_descriptor cdc_union;
+} __attribute__((packed)) cdcacm_functional_descriptors = {
+    .header = {
+        .bFunctionLength = sizeof(struct usb_cdc_header_descriptor),
+        .bDescriptorType = CS_INTERFACE,
+        .bDescriptorSubtype = USB_CDC_TYPE_HEADER,
+        .bcdCDC = 0x0110,
+    },
+    .call_mgmt = {
+        .bFunctionLength = sizeof(struct usb_cdc_call_management_descriptor),
+        .bDescriptorType = CS_INTERFACE,
+        .bDescriptorSubtype = USB_CDC_TYPE_CALL_MANAGEMENT,
+        .bmCapabilities = 0,
+        .bDataInterface = 1,
+    },
+    .acm = {
+        .bFunctionLength = sizeof(struct usb_cdc_acm_descriptor),
+        .bDescriptorType = CS_INTERFACE,
+        .bDescriptorSubtype = USB_CDC_TYPE_ACM,
+        .bmCapabilities = 0,
+    },
+    .cdc_union = {
+        .bFunctionLength = sizeof(struct usb_cdc_union_descriptor),
+        .bDescriptorType = CS_INTERFACE,
+        .bDescriptorSubtype = USB_CDC_TYPE_UNION,
+        .bControlInterface = 0,
+        .bSubordinateInterface0 = 1,
+    },
+};
+
+static const struct usb_interface_descriptor comm_iface[] = {{
+    .bLength = USB_DT_INTERFACE_SIZE,
+    .bDescriptorType = USB_DT_INTERFACE,
+    .bInterfaceNumber = INTERFACE_CDC_COMM,
+    .bAlternateSetting = 0,
+    .bNumEndpoints = 1,
+    .bInterfaceClass = USB_CLASS_CDC,
+    .bInterfaceSubClass = USB_CDC_SUBCLASS_ACM,
+    .bInterfaceProtocol = USB_CDC_PROTOCOL_AT,
+    .iInterface = 0,
+
+    .endpoint = comm_endp,
+
+    .extra = &cdcacm_functional_descriptors,
+    .extralen = sizeof(cdcacm_functional_descriptors),
+}};
+
+static const struct usb_interface_descriptor data_iface[] = {{
+    .bLength = USB_DT_INTERFACE_SIZE,
+    .bDescriptorType = USB_DT_INTERFACE,
+    .bInterfaceNumber = INTERFACE_CDC_DATA,
+    .bAlternateSetting = 0,
+    .bNumEndpoints = 2,
+    .bInterfaceClass = USB_CLASS_DATA,
+    .bInterfaceSubClass = 0,
+    .bInterfaceProtocol = 0,
+    .iInterface = 0,
+
+    .endpoint = data_endp,
+}};
+
+// An interface association allows the device to group a set of interfaces to
+// represent one logical device to be managed by one host driver.
+static const struct usb_iface_assoc_descriptor cdc_acm_interface_association = {
+    // The size of an interface association descriptor: 8
+    .bLength = USB_DT_INTERFACE_ASSOCIATION_SIZE,
+    // A value of 11 indicates that this descriptor describes an interface
+    // association.
+    .bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
+    // The first interface that is part of this group.
+    .bFirstInterface = INTERFACE_CDC_COMM,
+    // The number of included interfaces. This implies that the bundled
+    // interfaces must be continugous.
+    .bInterfaceCount = _CDC_IFACE_NB,
+    // The class, subclass, and protocol of device represented by this
+    // association. In this case a communication device.
+    .bFunctionClass = USB_CLASS_CDC,
+    // Using Abstract Control Model
+    .bFunctionSubClass = USB_CDC_SUBCLASS_ACM,
+    // With AT protocol (or Hayes compatible).
+    .bFunctionProtocol = USB_CDC_PROTOCOL_AT,
+    // A string representing this interface. Zero means not provided.
+    .iFunction = 0,
+};
+
+#endif
+
 #ifdef INCLUDE_DFU_INTERFACE
 const struct usb_dfu_descriptor dfu_function = {
     .bLength = sizeof(struct usb_dfu_descriptor),
@@ -276,7 +365,7 @@ const struct usb_dfu_descriptor dfu_function = {
 const struct usb_interface_descriptor dfu_iface = {
     .bLength = USB_DT_INTERFACE_SIZE,
     .bDescriptorType = USB_DT_INTERFACE,
-    .bInterfaceNumber = 1,
+    .bInterfaceNumber = _USB_IFACE_NB - 1, // last...
     .bAlternateSetting = 0,
     .bNumEndpoints = 0,
     .bInterfaceClass = 0xFE,
@@ -289,26 +378,37 @@ const struct usb_interface_descriptor dfu_iface = {
 };
 #endif
 
-const struct usb_interface ifaces[] = {{
-                                           .num_altsetting = 1,
-                                           .altsetting = &hid_iface,
-#ifdef INCLUDE_DFU_INTERFACE
-                                       },
-                                       {
-                                           .num_altsetting = 1,
-                                           .altsetting = &dfu_iface,
+const struct usb_interface ifaces[] = {
+    {
+        .num_altsetting = 1,
+        .altsetting = &hid_iface,
+    },
+#ifdef INCLUDE_CDC_INTERFACE
+    {
+        .num_altsetting = 1,
+        .altsetting = comm_iface,
+        .iface_assoc = &cdc_acm_interface_association,
+    },
+    {
+        .num_altsetting = 1,
+        .altsetting = data_iface,
+    },
 #endif
-                                       }};
+#ifdef INCLUDE_DFU_INTERFACE
+    {
+        .num_altsetting = 1,
+        .altsetting = &dfu_iface,
+    },
+#endif
+
+};
+
 
 const struct usb_config_descriptor config = {
     .bLength = USB_DT_CONFIGURATION_SIZE,
     .bDescriptorType = USB_DT_CONFIGURATION,
     .wTotalLength = 0,
-#ifdef INCLUDE_DFU_INTERFACE
-    .bNumInterfaces = 2,
-#else
-    .bNumInterfaces = 1,
-#endif
+    .bNumInterfaces = _USB_IFACE_NB,
     .bConfigurationValue = 1,
     .iConfiguration = 0,
     .bmAttributes = 0xC0,
@@ -372,12 +472,74 @@ static enum usbd_request_return_codes dfu_control_request(usbd_device *dev, stru
 }
 #endif
 
+#ifdef INCLUDE_CDC_INTERFACE
+static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_dev, struct usb_setup_data *req, uint8_t **buf,
+                                                             uint16_t *len, void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
+{
+    (void)complete;
+    (void)buf;
+    (void)usbd_dev;
+
+    switch (req->bRequest)
+    {
+    case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
+    {
+        /*
+		 * This Linux cdc_acm driver requires this to be implemented
+		 * even though it's optional in the CDC spec, and we don't
+		 * advertise it in the ACM functional descriptor.
+		 */
+        char local_buf[10];
+        struct usb_cdc_notification *notif = (void *)local_buf;
+
+        /* We echo signals back to host as notification. */
+        notif->bmRequestType = 0xA1;
+        notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
+        notif->wValue = 0;
+        notif->wIndex = 0;
+        notif->wLength = 2;
+        local_buf[8] = req->wValue & 3;
+        local_buf[9] = 0;
+        // usbd_ep_write_packet(0x83, buf, 10);
+        return USBD_REQ_HANDLED;
+    }
+    case USB_CDC_REQ_SET_LINE_CODING:
+        if (*len < sizeof(struct usb_cdc_line_coding))
+            return USBD_REQ_NOTSUPP;
+        return USBD_REQ_HANDLED;
+    }
+    return USBD_REQ_NOTSUPP;
+}
+
+static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
+{
+    (void)ep;
+    (void)usbd_dev;
+
+    char buf[64];
+    int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
+
+    if (len)
+    {
+        usbd_ep_write_packet(usbd_dev, 0x82, buf, len);
+        buf[len] = 0;
+    }
+}
+
+#endif
+
 static void hid_set_config(usbd_device *dev, uint16_t wValue)
 {
     (void)wValue;
     (void)dev;
 
     usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_INTERRUPT, 4, NULL);
+
+#ifdef INCLUDE_CDC_INTERFACE
+    usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
+    usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+    usbd_ep_setup(usbd_dev, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+#endif
 
     usbd_register_control_callback(
         dev,
@@ -390,6 +552,14 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
         USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
         USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
         dfu_control_request);
+#endif
+
+#ifdef INCLUDE_CDC_INTERFACE
+    usbd_register_control_callback(
+        usbd_dev,
+        USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
+        USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
+        cdcacm_control_request);
 #endif
 
     systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
@@ -428,18 +598,37 @@ int main(void)
         usbd_poll(usbd_dev);
 }
 
+uint8_t usbbuf[0x40];
+struct ControllerDataReport controllerDataReport;
+uint8_t tick = 0;
 void sys_tick_handler(void)
 {
     static int x = 0;
     static int dir = 1;
-    uint8_t buf[4] = {0x30, 0, 0, 0};
+    tick++;
 
-    buf[1] = dir;
+    // report ID
+    usbbuf[0x0] = 0x30;
+    // usbbuf[1] = dir;
     x += dir;
     if (x > 30)
         dir = -dir;
     if (x < -30)
         dir = -dir;
 
-    usbd_ep_write_packet(usbd_dev, 0x81, buf, 4);
+    memset(&controllerDataReport, 0, sizeof(struct ControllerDataReport));
+    controllerDataReport.controller_data.button_y = (x > 10);
+    controllerDataReport.controller_data.analog[0] = x;
+    controllerDataReport.controller_data.analog[2] = x;
+
+    if (tick & 0x80)
+    {
+        controllerDataReport.controller_data.button_left_sl = 1;
+        controllerDataReport.controller_data.button_left_sr = 1;
+        controllerDataReport.controller_data.dpad_down = 1;
+        controllerDataReport.controller_data.dpad_right = 1;
+    }
+
+    memcpy(&usbbuf[1], &controllerDataReport, sizeof(struct ControllerDataReport));
+    usbd_ep_write_packet(usbd_dev, 0x81, usbbuf, 0x40);
 }

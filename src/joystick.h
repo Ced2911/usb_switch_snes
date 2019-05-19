@@ -112,7 +112,7 @@ struct ControllerData {
 struct ControllerDataReport {
   struct ControllerData controller_data;  // 12 bytes
   uint8_t imu_data[36];
-  uint8_t padding[kMaxInputReportSizeBytes - 49];
+  uint8_t padding[kMaxInputReportSizeBytes - 49 /* 36 + 12 +1(reportid ?)?*/];
 };
 #pragma pack(pop)
 
