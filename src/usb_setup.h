@@ -13,9 +13,13 @@ enum
     ENDPOINT_CDC_DATA_OUT = 0x02
 };
 
+#define USB_VID 0x057e
+#define USB_PID 0x200e /*0x2009*/
+
 void usb_setup();
 void usb_poll();
 uint32_t usb_send_serial_data(void *buf, int len);
 uint16_t usb_write_packet(uint8_t ep, void * buf, uint16_t len);
+uint16_t usb_read_packet(uint8_t ep, void *buf, uint16_t len);
 
 void hid_rx_cb(uint8_t * buf, uint16_t len);

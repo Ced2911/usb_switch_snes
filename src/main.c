@@ -11,24 +11,6 @@
 #include "hwinit.h"
 #include "usb_setup.h"
 
-int main(void)
-{
-    hw_init();
-    usb_setup();
-
-    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-    /* SysTick interrupt every N clock pulses: set reload to N-1 */
-    systick_set_reload(99999);
-    systick_interrupt_enable();
-    systick_counter_enable();
-
-    while (1)
-        usb_poll();
-}
-
-uint8_t usbbuf[0x40];
-struct ControllerDataReport controllerDataReport;
-uint8_t tick = 0;
 
 void dump_hex(const void *data, size_t size)
 {
@@ -48,9 +30,28 @@ void dump_hex(const void *data, size_t size)
     usb_send_serial_data(ptr, ptr - ascii);
 }
 
+int main(void)
+{
+    hw_init();
+    usb_setup();
+
+    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
+    /* SysTick interrupt every N clock pulses: set reload to N-1 */
+    systick_set_reload(99999);
+    systick_interrupt_enable();
+    systick_counter_enable();
+
+    while (1)
+        usb_poll();
+}
+
+static uint8_t usbbuf[0x40];
+static struct ControllerDataReport controllerDataReport;
+static uint8_t tick = 0;
+
 void hid_rx_cb(uint8_t *buf, uint16_t len)
 {
-    dump_hex(*buf, len);
+    dump_hex(buf, len);
 }
 
 void sys_tick_handler(void)
@@ -59,8 +60,6 @@ void sys_tick_handler(void)
     static int dir = 1;
     tick++;
 
-    // report ID
-    usbbuf[0x0] = 0x30;
     // usbbuf[1] = dir;
     x += dir;
     if (x > 30)
@@ -77,6 +76,11 @@ void sys_tick_handler(void)
     //controllerDataReport.controller_data.analog[3] = x;
     controllerDataReport.controller_data.analog[4] = x;
     controllerDataReport.controller_data.analog[5] = x;
+
+
+    controllerDataReport.controller_data.battery_level = 0x6;
+    controllerDataReport.controller_data.connection_info = 0x1;
+    controllerDataReport.controller_data.vibrator_input_report = 0x82;
     /*
     if (tick & 0x80)
     {
@@ -94,6 +98,15 @@ void sys_tick_handler(void)
 
     // usb_send_serial_data("Bim\0", 4);
 
-    memcpy(&usbbuf[1], &ptr[2], sizeof(struct ControllerDataReport) - 2);
+
+    int len = usb_read_packet(ENDPOINT_HID_OUT, usbbuf, 0x40);
+    if (len) {
+        usb_send_serial_data("Bim\0", 4);
+    }
+
+    // report ID
+    usbbuf[0x0] = kReportIdInput30;
+    //memcpy(&usbbuf[1], &ptr[2], sizeof(struct ControllerDataReport) - 2);
+    memcpy(&usbbuf[1], ptr, sizeof(struct ControllerDataReport));
     usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);
 }

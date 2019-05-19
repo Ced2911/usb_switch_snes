@@ -49,8 +49,8 @@ static const struct usb_device_descriptor dev_descr = {
     .bDeviceSubClass = 0,
     .bDeviceProtocol = 0,
     .bMaxPacketSize0 = 64,
-    .idVendor = 0x057e,
-    .idProduct = 0x2009,
+    .idVendor = USB_VID,
+    .idProduct = USB_PID,
     .bcdDevice = 0x0200,
     .iManufacturer = 1,
     .iProduct = 2,
@@ -180,7 +180,7 @@ static const struct usb_endpoint_descriptor hid_endpoint[] = {
         .bEndpointAddress = ENDPOINT_HID_IN,
         .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
         .wMaxPacketSize = 0x40,
-        .bInterval = 0x20,
+        .bInterval = 0x08,
     },
     {
         .bLength = USB_DT_ENDPOINT_SIZE,
@@ -188,7 +188,7 @@ static const struct usb_endpoint_descriptor hid_endpoint[] = {
         .bEndpointAddress = ENDPOINT_HID_OUT,
         .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
         .wMaxPacketSize = 0x40,
-        .bInterval = 0x20,
+        .bInterval = 0x08,
     }};
 
 static const struct usb_interface_descriptor hid_iface = {
@@ -398,9 +398,9 @@ static const struct usb_config_descriptor config = {
 };
 
 static const char *usb_strings[] = {
-    "Black Sphere Technologies",
-    "HID Demo",
-    "DEMO",
+    "Nintendo Co., Ltd.",
+    "Pro Controller",
+    "000000000001",
 };
 
 /* Buffer to be used for control requests. */
@@ -512,13 +512,13 @@ static void hid_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 {
     (void)ep;
     (void)usbd_dev;
-    /*
 
     uint8_t buf[0x40];
-    int len = usbd_ep_read_packet(usbd_dev, ENDPOINT_CDC_DATA_OUT, buf, 0x40);
-
-    hid_rx_cb(len, len);
-    */
+    int len = usbd_ep_read_packet(usbd_dev, ENDPOINT_HID_OUT, buf, 0x40);
+    if (len)
+    {
+        hid_rx_cb(buf, len);
+    }
 }
 
 static void hid_set_config(usbd_device *dev, uint16_t wValue)
@@ -527,7 +527,7 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
     (void)dev;
 
     usbd_ep_setup(dev, ENDPOINT_HID_IN, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, NULL);
-    usbd_ep_setup(dev, ENDPOINT_HID_OUT, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, hid_data_rx_cb);
+    usbd_ep_setup(dev, ENDPOINT_HID_OUT, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, NULL);
 
 #ifdef INCLUDE_CDC_INTERFACE
     usbd_ep_setup(usbd_dev, ENDPOINT_CDC_DATA_OUT, USB_ENDPOINT_ATTR_BULK, 0x40, cdcacm_data_rx_cb);
@@ -581,4 +581,9 @@ void usb_poll()
 uint16_t usb_write_packet(uint8_t ep, void *buf, uint16_t len)
 {
     return usbd_ep_write_packet(usbd_dev, ep, buf, len);
+}
+
+uint16_t usb_read_packet(uint8_t ep, void *buf, uint16_t len)
+{
+    return usbd_ep_read_packet(usbd_dev, ep, buf, len);
 }
