@@ -77,6 +77,7 @@ struct ControllerData {
   uint8_t timestamp;
   uint8_t battery_level : 4;
   uint8_t connection_info : 4;
+  // btn right - 8bit
   uint8_t button_y : 1;
   uint8_t button_x : 1;
   uint8_t button_b : 1;
@@ -85,6 +86,7 @@ struct ControllerData {
   uint8_t button_right_sl : 1;
   uint8_t button_r : 1;
   uint8_t button_zr : 1;
+  // btn common - 8bit
   uint8_t button_minus : 1;
   uint8_t button_plus : 1;
   uint8_t button_thumb_r : 1;
@@ -93,6 +95,7 @@ struct ControllerData {
   uint8_t button_capture : 1;
   uint8_t dummy : 1;
   uint8_t charging_grip : 1;
+  // btn left - 8 bit
   uint8_t dpad_down : 1;
   uint8_t dpad_up : 1;
   uint8_t dpad_right : 1;
@@ -101,6 +104,7 @@ struct ControllerData {
   uint8_t button_left_sl : 1;
   uint8_t button_l : 1;
   uint8_t button_zl : 1;
+  // analog - 48
   uint8_t analog[6];
   uint8_t vibrator_input_report;
 };

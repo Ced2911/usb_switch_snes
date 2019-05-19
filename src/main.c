@@ -68,11 +68,16 @@ void sys_tick_handler(void)
     if (x < -30)
         dir = -dir;
 
+    uint8_t *ptr = (uint8_t *)&controllerDataReport;
     memset(&controllerDataReport, 0, sizeof(struct ControllerDataReport));
-    controllerDataReport.controller_data.button_y = (x > 10);
-    controllerDataReport.controller_data.analog[0] = x;
-    controllerDataReport.controller_data.analog[2] = x;
-
+    //controllerDataReport.controller_data.button_y = (x > 10);
+    //controllerDataReport.controller_data.analog[0] = x;
+    //controllerDataReport.controller_data.analog[1] = x;
+    //controllerDataReport.controller_data.analog[2] = x;
+    //controllerDataReport.controller_data.analog[3] = x;
+    controllerDataReport.controller_data.analog[4] = x;
+    controllerDataReport.controller_data.analog[5] = x;
+    /*
     if (tick & 0x80)
     {
         controllerDataReport.controller_data.button_left_sl = 1;
@@ -81,8 +86,14 @@ void sys_tick_handler(void)
         controllerDataReport.controller_data.dpad_right = 1;
     }
 
-   // usb_send_serial_data("Bim\0", 4);
+    controllerDataReport.controller_data.button_left_sl = 1;
+    controllerDataReport.controller_data.button_left_sr = 1;
+    controllerDataReport.controller_data.dpad_down = 1;
+    controllerDataReport.controller_data.dpad_right = 1;
+    */
 
-    memcpy(&usbbuf[1], &controllerDataReport, sizeof(struct ControllerDataReport));
+    // usb_send_serial_data("Bim\0", 4);
+
+    memcpy(&usbbuf[1], &ptr[2], sizeof(struct ControllerDataReport) - 2);
     usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);
 }
