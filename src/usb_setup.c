@@ -59,10 +59,11 @@ static const struct usb_device_descriptor dev_descr = {
 };
 
 static const uint8_t hid_report_descriptor[] = {
-    0x05, 0x01,                   // Usage Page (Generic Desktop Ctrls)
-    0x15, 0x00,                   // Logical Minimum (0)
-    0x09, 0x04,                   // Usage (Joystick)
-    0xA1, 0x01,                   // Collection (Application)
+    0x05, 0x01, // Usage Page (Generic Desktop Ctrls)
+    0x15, 0x00, // Logical Minimum (0)
+    0x09, 0x04, // Usage (Joystick)
+    0xA1, 0x01, // Collection (Application)
+    // report 0x30
     0x85, 0x30,                   //   Report ID (48)
     0x05, 0x01,                   //   Usage Page (Generic Desktop Ctrls)
     0x05, 0x09,                   //   Usage Page (Button)
@@ -119,37 +120,49 @@ static const uint8_t hid_report_descriptor[] = {
     0x95, 0x34,                   //   Report Count (52)
     0x81, 0x03,                   //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     0x06, 0x00, 0xFF,             //   Usage Page (Vendor Defined 0xFF00)
-    0x85, 0x21,                   //   Report ID (33)
-    0x09, 0x01,                   //   Usage (0x01)
-    0x75, 0x08,                   //   Report Size (8)
-    0x95, 0x3F,                   //   Report Count (63)
-    0x81, 0x03,                   //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0x85, 0x81,                   //   Report ID (-127)
-    0x09, 0x02,                   //   Usage (0x02)
-    0x75, 0x08,                   //   Report Size (8)
-    0x95, 0x3F,                   //   Report Count (63)
-    0x81, 0x03,                   //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-    0x85, 0x01,                   //   Report ID (1)
-    0x09, 0x03,                   //   Usage (0x03)
-    0x75, 0x08,                   //   Report Size (8)
-    0x95, 0x3F,                   //   Report Count (63)
-    0x91, 0x83,                   //   Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Volatile)
-    0x85, 0x10,                   //   Report ID (16)
-    0x09, 0x04,                   //   Usage (0x04)
-    0x75, 0x08,                   //   Report Size (8)
-    0x95, 0x3F,                   //   Report Count (63)
-    0x91, 0x83,                   //   Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Volatile)
-    0x85, 0x80,                   //   Report ID (-128)
-    0x09, 0x05,                   //   Usage (0x05)
-    0x75, 0x08,                   //   Report Size (8)
-    0x95, 0x3F,                   //   Report Count (63)
-    0x91, 0x83,                   //   Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Volatile)
-    0x85, 0x82,                   //   Report ID (-126)
-    0x09, 0x06,                   //   Usage (0x06)
-    0x75, 0x08,                   //   Report Size (8)
-    0x95, 0x3F,                   //   Report Count (63)
-    0x91, 0x83,                   //   Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Volatile)
-    0xC0,                         // End Collection
+
+    // report 0x21
+    0x85, 0x21, //   Report ID (33)
+    0x09, 0x01, //   Usage (0x01)
+    0x75, 0x08, //   Report Size (8)
+    0x95, 0x3F, //   Report Count (63)
+    0x81, 0x03, //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+
+    // report 0x81
+    0x85, 0x81, //   Report ID (-127)
+    0x09, 0x02, //   Usage (0x02)
+    0x75, 0x08, //   Report Size (8)
+    0x95, 0x3F, //   Report Count (63)
+    0x81, 0x03, //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+
+    // report out 0x01
+    0x85, 0x01, //   Report ID (1)
+    0x09, 0x03, //   Usage (0x03)
+    0x75, 0x08, //   Report Size (8)
+    0x95, 0x3F, //   Report Count (63)
+    0x91, 0x83, //   Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Volatile)
+
+    // report out 0x10
+    0x85, 0x10, //   Report ID (16)
+    0x09, 0x04, //   Usage (0x04)
+    0x75, 0x08, //   Report Size (8)
+    0x95, 0x3F, //   Report Count (63)
+    0x91, 0x83, //   Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Volatile)
+
+    // report out 0x80
+    0x85, 0x80, //   Report ID (-128)
+    0x09, 0x05, //   Usage (0x05)
+    0x75, 0x08, //   Report Size (8)
+    0x95, 0x3F, //   Report Count (63)
+    0x91, 0x83, //   Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Volatile)
+
+    // report out 0x82
+    0x85, 0x82, //   Report ID (-126)
+    0x09, 0x06, //   Usage (0x06)
+    0x75, 0x08, //   Report Size (8)
+    0x95, 0x3F, //   Report Count (63)
+    0x91, 0x83, //   Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Volatile)
+    0xC0,       // End Collection
 };
 
 static const struct

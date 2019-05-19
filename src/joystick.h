@@ -72,7 +72,7 @@ static const int kVibrationFrequencyHzMin = 41;
 static const int kVibrationFrequencyHzMax = 1253;
 static const int kVibrationAmplitudeMax = 1000;
 
-#pragma pack(push, 1)
+#pragma pack(1)
 struct ControllerData {
   uint8_t timestamp;
   uint8_t battery_level : 4;
@@ -108,21 +108,19 @@ struct ControllerData {
   uint8_t analog[6];
   uint8_t vibrator_input_report;
 };
-#pragma pack(pop)
 
 // In standard full input report mode, controller data is reported with IMU data
 // in reports with ID 0x30.
-#pragma pack(push, 1)
+#pragma pack(1)
 struct ControllerDataReport {
   struct ControllerData controller_data;  // 12 bytes
   uint8_t imu_data[36];
   uint8_t padding[kMaxInputReportSizeBytes - 49 /* 36 + 12 +1(reportid ?)?*/];
 };
-#pragma pack(pop)
 
 // Responses to SPI read requests are sent in reports with ID 0x21. These
 // reports also include controller data.
-#pragma pack(push, 1)
+#pragma pack(1)
 struct SpiReadReport {
   struct ControllerData controller_data;  // 12 bytes
   uint8_t subcommand_ack;          // 0x90

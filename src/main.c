@@ -11,7 +11,6 @@
 #include "hwinit.h"
 #include "usb_setup.h"
 
-
 void dump_hex(const void *data, size_t size)
 {
     char ascii[0x40];
@@ -41,6 +40,7 @@ int main(void)
     systick_interrupt_enable();
     systick_counter_enable();
 
+    usb_send_serial_data("Ready\n\0", 7);
     while (1)
         usb_poll();
 }
@@ -77,7 +77,6 @@ void sys_tick_handler(void)
     controllerDataReport.controller_data.analog[4] = x;
     controllerDataReport.controller_data.analog[5] = x;
 
-
     controllerDataReport.controller_data.battery_level = 0x6;
     controllerDataReport.controller_data.connection_info = 0x1;
     controllerDataReport.controller_data.vibrator_input_report = 0x82;
@@ -98,15 +97,18 @@ void sys_tick_handler(void)
 
     // usb_send_serial_data("Bim\0", 4);
 
-
     int len = usb_read_packet(ENDPOINT_HID_OUT, usbbuf, 0x40);
-    if (len) {
+    if (len)
+    {
         usb_send_serial_data("Bim\0", 4);
     }
 
     // report ID
-    usbbuf[0x0] = kReportIdInput30;
+    usbbuf[0x00] = kReportIdInput30;
     //memcpy(&usbbuf[1], &ptr[2], sizeof(struct ControllerDataReport) - 2);
     memcpy(&usbbuf[1], ptr, sizeof(struct ControllerDataReport));
+    usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);
+
+    usbbuf[0x0] = 0x21;
     usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);
 }
