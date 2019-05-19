@@ -6,71 +6,71 @@
 #define kMaxInputReportSizeBytes  64
 
 // Report IDs.
-const uint8_t kReportIdOutput01 = 0x01;
-const uint8_t kReportIdOutput10 = 0x10;
-const uint8_t kReportIdInput21 = 0x21;
-const uint8_t kReportIdInput30 = 0x30;
-const uint8_t kUsbReportIdOutput80 = 0x80;
-const uint8_t kUsbReportIdInput81 = 0x81;
+static const uint8_t kReportIdOutput01 = 0x01;
+static const uint8_t kReportIdOutput10 = 0x10;
+static const uint8_t kReportIdInput21 = 0x21;
+static const uint8_t kReportIdInput30 = 0x30;
+static const uint8_t kUsbReportIdOutput80 = 0x80;
+static const uint8_t kUsbReportIdInput81 = 0x81;
 
 // Sub-types of the 0x80 output report, used for initialization.
-const uint8_t kSubTypeRequestMac = 0x01;
-const uint8_t kSubTypeHandshake = 0x02;
-const uint8_t kSubTypeBaudRate = 0x03;
-const uint8_t kSubTypeDisableUsbTimeout = 0x04;
-const uint8_t kSubTypeEnableUsbTimeout = 0x05;
+static const uint8_t kSubTypeRequestMac = 0x01;
+static const uint8_t kSubTypeHandshake = 0x02;
+static const uint8_t kSubTypeBaudRate = 0x03;
+static const uint8_t kSubTypeDisableUsbTimeout = 0x04;
+static const uint8_t kSubTypeEnableUsbTimeout = 0x05;
 
 // UART subcommands.
-const uint8_t kSubCommandSetInputReportMode = 0x03;
-const uint8_t kSubCommandReadSpi = 0x10;
-const uint8_t kSubCommandSetPlayerLights = 0x30;
-const uint8_t kSubCommand33 = 0x33;
-const uint8_t kSubCommandSetHomeLight = 0x38;
-const uint8_t kSubCommandEnableImu = 0x40;
-const uint8_t kSubCommandSetImuSensitivity = 0x41;
-const uint8_t kSubCommandEnableVibration = 0x48;
+static const uint8_t kSubCommandSetInputReportMode = 0x03;
+static const uint8_t kSubCommandReadSpi = 0x10;
+static const uint8_t kSubCommandSetPlayerLights = 0x30;
+static const uint8_t kSubCommand33 = 0x33;
+static const uint8_t kSubCommandSetHomeLight = 0x38;
+static const uint8_t kSubCommandEnableImu = 0x40;
+static const uint8_t kSubCommandSetImuSensitivity = 0x41;
+static const uint8_t kSubCommandEnableVibration = 0x48;
 
 // SPI memory regions.
-const uint16_t kSpiImuCalibrationAddress = 0x6020;
-const uint32_t kSpiImuCalibrationSize = 24;
-const uint16_t kSpiAnalogStickCalibrationAddress = 0x603d;
-const uint32_t kSpiAnalogStickCalibrationSize = 18;
-const uint16_t kSpiImuHorizontalOffsetsAddress = 0x6080;
-const uint32_t kSpiImuHorizontalOffsetsSize = 6;
-const uint16_t kSpiAnalogStickParametersAddress = 0x6086;
-const uint32_t kSpiAnalogStickParametersSize = 18;
+static const uint16_t kSpiImuCalibrationAddress = 0x6020;
+static const uint32_t kSpiImuCalibrationSize = 24;
+static const uint16_t kSpiAnalogStickCalibrationAddress = 0x603d;
+static const uint32_t kSpiAnalogStickCalibrationSize = 18;
+static const uint16_t kSpiImuHorizontalOffsetsAddress = 0x6080;
+static const uint32_t kSpiImuHorizontalOffsetsSize = 6;
+static const uint16_t kSpiAnalogStickParametersAddress = 0x6086;
+static const uint32_t kSpiAnalogStickParametersSize = 18;
 
 // Byte index for the first byte of subcommand data in 0x80 output reports.
-const uint32_t kSubCommandDataOffset = 11;
+static const uint32_t kSubCommandDataOffset = 11;
 // Byte index for the first byte of SPI data in SPI read responses.
 #define kSpiDataOffset 20
 
 // Values for the |device_type| field reported in the MAC reply.
-const uint8_t kUsbDeviceTypeChargingGripNoDevice = 0x00;
-const uint8_t kUsbDeviceTypeChargingGripJoyConL = 0x01;
-const uint8_t kUsbDeviceTypeChargingGripJoyConR = 0x02;
-const uint8_t kUsbDeviceTypeProController = 0x03;
+static const uint8_t kUsbDeviceTypeChargingGripNoDevice = 0x00;
+static const uint8_t kUsbDeviceTypeChargingGripJoyConL = 0x01;
+static const uint8_t kUsbDeviceTypeChargingGripJoyConR = 0x02;
+static const uint8_t kUsbDeviceTypeProController = 0x03;
 
-const uint32_t kMaxRetryCount = 3;
+static const uint32_t kMaxRetryCount = 3;
 
-const uint32_t kMaxVibrationEffectDurationMillis = 100;
+static const uint32_t kMaxVibrationEffectDurationMillis = 100;
 
 // Initialization parameters.
-const uint8_t kGyroSensitivity2000Dps = 0x03;
-const uint8_t kAccelerometerSensitivity8G = 0x00;
-const uint8_t kGyroPerformance208Hz = 0x01;
-const uint8_t kAccelerometerFilterBandwidth100Hz = 0x01;
-const uint8_t kPlayerLightPattern1 = 0x01;
+static const uint8_t kGyroSensitivity2000Dps = 0x03;
+static const uint8_t kAccelerometerSensitivity8G = 0x00;
+static const uint8_t kGyroPerformance208Hz = 0x01;
+static const uint8_t kAccelerometerFilterBandwidth100Hz = 0x01;
+static const uint8_t kPlayerLightPattern1 = 0x01;
 
 // Parameters for the "strong" and "weak" components of the dual-rumble effect.
-const double kVibrationFrequencyStrongRumble = 141.0;
-const double kVibrationFrequencyWeakRumble = 182.0;
-const double kVibrationAmplitudeStrongRumbleMax = 0.9;
-const double kVibrationAmplitudeWeakRumbleMax = 0.1;
+static const double kVibrationFrequencyStrongRumble = 141.0;
+static const double kVibrationFrequencyWeakRumble = 182.0;
+static const double kVibrationAmplitudeStrongRumbleMax = 0.9;
+static const double kVibrationAmplitudeWeakRumbleMax = 0.1;
 
-const int kVibrationFrequencyHzMin = 41;
-const int kVibrationFrequencyHzMax = 1253;
-const int kVibrationAmplitudeMax = 1000;
+static const int kVibrationFrequencyHzMin = 41;
+static const int kVibrationFrequencyHzMax = 1253;
+static const int kVibrationAmplitudeMax = 1000;
 
 #pragma pack(push, 1)
 struct ControllerData {
