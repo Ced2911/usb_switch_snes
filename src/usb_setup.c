@@ -6,6 +6,7 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/hid.h>
 
+#include "compat.h"
 #include "usb_setup.h"
 
 #ifdef INCLUDE_CDC_INTERFACE
@@ -419,22 +420,55 @@ static const char *usb_strings[] = {
 /* Buffer to be used for control requests. */
 static uint8_t usbd_control_buffer[128];
 
-static enum usbd_request_return_codes hid_control_request(usbd_device *dev, struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
-                                                          void (**complete)(usbd_device *, struct usb_setup_data *))
+char shared_buf[0x40] = {0};
+
+static void hid_out_complete(usbd_device *dev, struct usb_setup_data *req)
+{
+    memcpy(shared_buf, "hit\n", 4);
+}
+
+static enum usbd_request_return_codes vendor_control_request(
+    usbd_device *dev,
+    struct usb_setup_data *req,
+    uint8_t **buf, uint16_t *len,
+    void (**complete)(usbd_device *, struct usb_setup_data *))
 {
     (void)complete;
     (void)dev;
 
-    if ((req->bmRequestType != ENDPOINT_HID_IN) ||
-        (req->bRequest != USB_REQ_GET_DESCRIPTOR) ||
-        (req->wValue != 0x2200))
-        return USBD_REQ_NOTSUPP;
+#if 1
+    if ((req->bmRequestType == USB_REQ_TYPE_VENDOR))
+    {
+        *complete = hid_out_complete;
+        gpio_clear(GPIOB, GPIO12);
+        return USBD_REQ_HANDLED;
+    }
 
-    /* Handle the HID report descriptor. */
-    *buf = (uint8_t *)hid_report_descriptor;
-    *len = sizeof(hid_report_descriptor);
+    return USBD_REQ_NOTSUPP;
+#endif
+}
 
-    return USBD_REQ_HANDLED;
+static enum usbd_request_return_codes hid_control_request(
+    usbd_device *dev, struct usb_setup_data *req,
+    uint8_t **buf, uint16_t *len,
+    void (**complete)(usbd_device *, struct usb_setup_data *))
+{
+    (void)complete;
+    (void)dev;
+
+    if ((req->bmRequestType == 0x81) &&
+        (req->bRequest == USB_REQ_GET_DESCRIPTOR) &&
+        (req->wValue == 0x2200))
+    {
+
+        /* Handle the HID report descriptor. */
+        *buf = (uint8_t *)hid_report_descriptor;
+        *len = sizeof(hid_report_descriptor);
+
+        return USBD_REQ_HANDLED;
+    }
+
+    return USBD_REQ_NOTSUPP;
 }
 
 #ifdef INCLUDE_DFU_INTERFACE
@@ -553,6 +587,12 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
         USB_REQ_TYPE_STANDARD | USB_REQ_TYPE_INTERFACE,
         USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
         hid_control_request);
+
+    usbd_register_control_callback(
+        dev,
+        USB_REQ_TYPE_VENDOR,
+        USB_REQ_TYPE_TYPE,
+        vendor_control_request);
 
 #ifdef INCLUDE_DFU_INTERFACE
     usbd_register_control_callback(

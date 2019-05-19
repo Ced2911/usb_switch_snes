@@ -23,3 +23,8 @@ uint16_t usb_write_packet(uint8_t ep, void * buf, uint16_t len);
 uint16_t usb_read_packet(uint8_t ep, void *buf, uint16_t len);
 
 void hid_rx_cb(uint8_t * buf, uint16_t len);
+
+
+extern char shared_buf[0x40];
+
+

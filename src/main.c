@@ -54,13 +54,10 @@ void hid_rx_cb(uint8_t *buf, uint16_t len)
     dump_hex(buf, len);
 }
 
-void sys_tick_handler(void)
+void input_report_0x30()
 {
     static int x = 0;
     static int dir = 1;
-    tick++;
-
-    // usbbuf[1] = dir;
     x += dir;
     if (x > 30)
         dir = -dir;
@@ -69,46 +66,66 @@ void sys_tick_handler(void)
 
     uint8_t *ptr = (uint8_t *)&controllerDataReport;
     memset(&controllerDataReport, 0, sizeof(struct ControllerDataReport));
-    //controllerDataReport.controller_data.button_y = (x > 10);
-    //controllerDataReport.controller_data.analog[0] = x;
-    //controllerDataReport.controller_data.analog[1] = x;
-    //controllerDataReport.controller_data.analog[2] = x;
-    //controllerDataReport.controller_data.analog[3] = x;
+
     controllerDataReport.controller_data.analog[4] = x;
     controllerDataReport.controller_data.analog[5] = x;
 
     controllerDataReport.controller_data.battery_level = 0x6;
     controllerDataReport.controller_data.connection_info = 0x1;
     controllerDataReport.controller_data.vibrator_input_report = 0x82;
-    /*
-    if (tick & 0x80)
-    {
-        controllerDataReport.controller_data.button_left_sl = 1;
-        controllerDataReport.controller_data.button_left_sr = 1;
-        controllerDataReport.controller_data.dpad_down = 1;
-        controllerDataReport.controller_data.dpad_right = 1;
-    }
-
-    controllerDataReport.controller_data.button_left_sl = 1;
-    controllerDataReport.controller_data.button_left_sr = 1;
-    controllerDataReport.controller_data.dpad_down = 1;
-    controllerDataReport.controller_data.dpad_right = 1;
-    */
-
-    // usb_send_serial_data("Bim\0", 4);
-
-    int len = usb_read_packet(ENDPOINT_HID_OUT, usbbuf, 0x40);
-    if (len)
-    {
-        usb_send_serial_data("Bim\0", 4);
-    }
 
     // report ID
-    usbbuf[0x00] = kReportIdInput30;
+    usbbuf[0x00] = kReportIdInput21;
     //memcpy(&usbbuf[1], &ptr[2], sizeof(struct ControllerDataReport) - 2);
     memcpy(&usbbuf[1], ptr, sizeof(struct ControllerDataReport));
     usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);
+}
 
-    usbbuf[0x0] = 0x21;
+struct UsbInputReport81 usbInputReport81;
+void input_report_0x81_sub0x01()
+{
+    uint8_t *ptr = (uint8_t *)&usbInputReport81;
+    usbbuf[0x00] = kUsbReportIdInput81;
+    memcpy(&usbbuf[1], ptr, sizeof(struct UsbInputReport81));
+
+    usbInputReport81.subtype = 0x1;
+
     usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);
+}
+
+void input_report_0x81_sub0x02()
+{
+    struct MacAddressReport macAddressReport = {
+        .subtype = 0x01,
+        .device_type = 0x03,
+
+    };
+    uint8_t *ptr = (uint8_t *)&usbInputReport81;
+    usbbuf[0x00] = kUsbReportIdInput81;
+    memcpy(&usbbuf[1], ptr, sizeof(struct UsbInputReport81));
+
+    usbInputReport81.subtype = 0x1;
+
+    usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);
+}
+
+static int step = 0;
+
+void sys_tick_handler(void)
+{
+    switch (step)
+    {
+    case 0:
+        input_report_0x81_sub0x01();
+        step++;
+        break;
+    case 1:
+        input_report_0x81_sub0x02();
+        step++;
+        break;
+    case 2:
+    default:
+        input_report_0x30();
+        break;
+    }
 }

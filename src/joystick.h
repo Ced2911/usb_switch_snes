@@ -131,3 +131,18 @@ struct SpiReadReport {
   uint8_t length;
   uint8_t spi_data[kMaxInputReportSizeBytes - kSpiDataOffset];
 };
+
+#pragma pack(1)
+struct UsbInputReport81 {
+  uint8_t subtype;
+  uint8_t data[kMaxInputReportSizeBytes - 2];
+};
+
+#pragma pack(1)
+struct MacAddressReport {
+  uint8_t subtype;  // 0x01
+  uint8_t padding;
+  uint8_t device_type;
+  uint8_t mac_data[6];
+  uint8_t padding2[kMaxInputReportSizeBytes - 10];
+};

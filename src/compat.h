@@ -82,12 +82,24 @@
 #define HID_RI_USAGE_MAXIMUM(DataBits, ...) _HID_RI_ENTRY(HID_RI_TYPE_LOCAL, 0x20, DataBits, __VA_ARGS__)
 //@}
 
+#define REQDIR_DEVICETOHOST (1 << 7)
+#define REQDIR_HOSTTODEVICE (0 << 7)
+#define REQTYPE_CLASS (1 << 5)
+#define REQREC_INTERFACE (1 << 0)
 
-#define max(a,b) \
-   ({ __typeof__ (a) _a = (a); \
+enum HID_ClassRequests_t
+{
+    HID_REQ_GetReport = 0x01,
+    HID_REQ_GetIdle = 0x02,
+    HID_REQ_GetProtocol = 0x03,
+    HID_REQ_SetReport = 0x09,
+    HID_REQ_SetIdle = 0x0A,
+    HID_REQ_SetProtocol = 0x0B
+};
+
+#define max(a, b) \
+    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
 #define HEX_CHAR(x) ((((x) + '0') > '9') ? ((x) + '7') : ((x) + '0'))
-
-    
