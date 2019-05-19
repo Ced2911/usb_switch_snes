@@ -234,15 +234,15 @@ const struct usb_endpoint_descriptor hid_endpoint[] = {
         .bDescriptorType = USB_DT_ENDPOINT,
         .bEndpointAddress = 0x81,
         .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
-        .wMaxPacketSize = 4,
+        .wMaxPacketSize = 64,
         .bInterval = 0x20,
     },
     {
         .bLength = USB_DT_ENDPOINT_SIZE,
         .bDescriptorType = USB_DT_ENDPOINT,
-        .bEndpointAddress = 0x02,
+        .bEndpointAddress = 0x01,
         .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
-        .wMaxPacketSize = 4,
+        .wMaxPacketSize = 64,
         .bInterval = 0x20,
     }};
 
