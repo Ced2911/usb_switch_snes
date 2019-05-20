@@ -14,7 +14,8 @@ enum
 };
 
 #define USB_VID 0x057e
-#define USB_PID 0x200e /*0x2009*/
+#define USB_PID 0x2009
+//#define USB_PID 0x200e
 
 void usb_setup();
 void usb_poll();

@@ -2,16 +2,15 @@
 
 #include <stdint.h>
 
-
-#define kMaxInputReportSizeBytes  64
+#define kMaxInputReportSizeBytes 64
 
 // Report IDs.
-static const uint8_t kReportIdOutput01 = 0x01;
-static const uint8_t kReportIdOutput10 = 0x10;
-static const uint8_t kReportIdInput21 = 0x21;
-static const uint8_t kReportIdInput30 = 0x30;
-static const uint8_t kUsbReportIdOutput80 = 0x80;
-static const uint8_t kUsbReportIdInput81 = 0x81;
+#define kReportIdOutput01 0x01
+#define kReportIdOutput10 0x10
+#define kReportIdInput21 0x21
+#define kReportIdInput30 0x30
+#define kUsbReportIdOutput80 0x80
+#define kUsbReportIdInput81 0x81
 
 // Sub-types of the 0x80 output report, used for initialization.
 static const uint8_t kSubTypeRequestMac = 0x01;
@@ -73,7 +72,8 @@ static const int kVibrationFrequencyHzMax = 1253;
 static const int kVibrationAmplitudeMax = 1000;
 
 #pragma pack(1)
-struct ControllerData {
+struct ControllerData
+{
   uint8_t timestamp;
   uint8_t battery_level : 4;
   uint8_t connection_info : 4;
@@ -112,8 +112,9 @@ struct ControllerData {
 // In standard full input report mode, controller data is reported with IMU data
 // in reports with ID 0x30.
 #pragma pack(1)
-struct ControllerDataReport {
-  struct ControllerData controller_data;  // 12 bytes
+struct ControllerDataReport
+{
+  struct ControllerData controller_data; // 12 bytes
   uint8_t imu_data[36];
   uint8_t padding[kMaxInputReportSizeBytes - 49 /* 36 + 12 +1(reportid ?)?*/];
 };
@@ -121,28 +122,101 @@ struct ControllerDataReport {
 // Responses to SPI read requests are sent in reports with ID 0x21. These
 // reports also include controller data.
 #pragma pack(1)
-struct SpiReadReport {
-  struct ControllerData controller_data;  // 12 bytes
-  uint8_t subcommand_ack;          // 0x90
-  uint8_t subcommand;              // 0x10
+struct SpiReadReport
+{
+  struct ControllerData controller_data; // 12 bytes
+  uint8_t subcommand_ack;                // 0x90
+  uint8_t subcommand;                    // 0x10
   uint8_t addrl;
   uint8_t addrh;
-  uint8_t padding[2];  // 0x00 0x00
+  uint8_t padding[2]; // 0x00 0x00
   uint8_t length;
   uint8_t spi_data[kMaxInputReportSizeBytes - kSpiDataOffset];
 };
 
 #pragma pack(1)
-struct UsbInputReport81 {
+struct UsbInputReport81
+{
   uint8_t subtype;
   uint8_t data[kMaxInputReportSizeBytes - 2];
 };
 
 #pragma pack(1)
-struct MacAddressReport {
-  uint8_t subtype;  // 0x01
+struct MacAddressReport
+{
+  uint8_t subtype; // 0x01
   uint8_t padding;
   uint8_t device_type;
   uint8_t mac_data[6];
   uint8_t padding2[kMaxInputReportSizeBytes - 10];
+};
+
+#pragma pack(1)
+struct brcm_hdr
+{
+  uint8_t cmd;
+  uint8_t timer;
+  uint8_t rumble_l[4];
+  uint8_t rumble_r[4];
+};
+
+#pragma pack(1)
+struct brcm_cmd_01
+{
+  uint8_t subcmd;
+  union {
+    struct
+    {
+      uint32_t offset;
+      uint8_t size;
+    } spi_data;
+
+    struct
+    {
+      uint8_t arg1;
+      uint8_t arg2;
+    } subcmd_arg;
+
+    struct
+    {
+      uint8_t mcu_cmd;
+      uint8_t mcu_subcmd;
+      uint8_t mcu_mode;
+    } subcmd_21_21;
+
+    struct
+    {
+      uint8_t mcu_cmd;
+      uint8_t mcu_subcmd;
+      uint8_t no_of_reg;
+      uint16_t reg1_addr;
+      uint8_t reg1_val;
+      uint16_t reg2_addr;
+      uint8_t reg2_val;
+      uint16_t reg3_addr;
+      uint8_t reg3_val;
+      uint16_t reg4_addr;
+      uint8_t reg4_val;
+      uint16_t reg5_addr;
+      uint8_t reg5_val;
+      uint16_t reg6_addr;
+      uint8_t reg6_val;
+      uint16_t reg7_addr;
+      uint8_t reg7_val;
+      uint16_t reg8_addr;
+      uint8_t reg8_val;
+      uint16_t reg9_addr;
+      uint8_t reg9_val;
+    } subcmd_21_23_04;
+
+    struct
+    {
+      uint8_t mcu_cmd;
+      uint8_t mcu_subcmd;
+      uint8_t mcu_ir_mode;
+      uint8_t no_of_frags;
+      uint16_t mcu_major_v;
+      uint16_t mcu_minor_v;
+    } subcmd_21_23_01;
+  };
 };

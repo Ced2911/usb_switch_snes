@@ -45,7 +45,8 @@ int main(void)
         usb_poll();
 }
 
-static uint8_t usbbuf[0x40];
+static uint8_t usb_in_buf[0x40];
+static uint8_t usb_out_buf[0x40];
 static struct ControllerDataReport controllerDataReport;
 static uint8_t tick = 0;
 
@@ -75,55 +76,73 @@ void input_report_0x30()
     controllerDataReport.controller_data.vibrator_input_report = 0x82;
 
     // report ID
-    usbbuf[0x00] = kReportIdInput21;
+    usb_out_buf[0x00] = kReportIdInput30;
     //memcpy(&usbbuf[1], &ptr[2], sizeof(struct ControllerDataReport) - 2);
-    memcpy(&usbbuf[1], ptr, sizeof(struct ControllerDataReport));
-    usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);
+    memcpy(&usb_out_buf[1], ptr, sizeof(struct ControllerDataReport));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
 struct UsbInputReport81 usbInputReport81;
+
+void input_sub_cmd_0x50()
+{
+    usb_send_serial_data("battery\n", strlen("battery\n"));
+    usb_poll();
+
+
+    uint8_t *ptr = (uint8_t *)&usbInputReport81;
+    usb_out_buf[0x00] = kUsbReportIdInput81;
+    memcpy(&usb_out_buf[1], ptr, sizeof(struct UsbInputReport81));
+
+    usb_out_buf[0x01] = 0xD0;
+    usb_out_buf[0x02] = 0x50;
+    usb_out_buf[0x03] = 0x06;
+    usb_out_buf[0x04] = 0x90;
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+void input_sub_cmd_unk()
+{
+    uint8_t *ptr = (uint8_t *)&usbInputReport81;
+    usb_out_buf[0x00] = kUsbReportIdInput81;
+    memcpy(&usb_out_buf[1], ptr, sizeof(struct UsbInputReport81));
+
+    usb_out_buf[0x01] = 0x80;
+    usb_out_buf[0x02] = 0x03;
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
 void input_report_0x81_sub0x01()
 {
-    uint8_t *ptr = (uint8_t *)&usbInputReport81;
-    usbbuf[0x00] = kUsbReportIdInput81;
-    memcpy(&usbbuf[1], ptr, sizeof(struct UsbInputReport81));
 
-    usbInputReport81.subtype = 0x1;
-
-    usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);
+    switch (usb_in_buf[0x01])
+    {
+    case 0x50: // battery
+        input_sub_cmd_0x50();
+        break;
+    default:
+        input_sub_cmd_unk();
+        break;
+    }
 }
-
-void input_report_0x81_sub0x02()
-{
-    struct MacAddressReport macAddressReport = {
-        .subtype = 0x01,
-        .device_type = 0x03,
-
-    };
-    uint8_t *ptr = (uint8_t *)&usbInputReport81;
-    usbbuf[0x00] = kUsbReportIdInput81;
-    memcpy(&usbbuf[1], ptr, sizeof(struct UsbInputReport81));
-
-    usbInputReport81.subtype = 0x1;
-
-    usb_write_packet(ENDPOINT_HID_IN, usbbuf, 0x40);
-}
-
-static int step = 0;
 
 void sys_tick_handler(void)
 {
-    switch (step)
+    uint8_t cmd = kReportIdInput30;
+    int len = usb_read_packet(ENDPOINT_HID_OUT, usb_in_buf, 0x40);
+    if (len)
     {
-    case 0:
+       // dump_hex(usb_in_buf, 0x40);
+    }
+
+    switch (cmd)
+    {
+    case kReportIdOutput01:
         input_report_0x81_sub0x01();
-        step++;
         break;
-    case 1:
-        input_report_0x81_sub0x02();
-        step++;
-        break;
-    case 2:
+    case kReportIdOutput10:
+    case kUsbReportIdOutput80:
+    case kReportIdInput30:
     default:
         input_report_0x30();
         break;
