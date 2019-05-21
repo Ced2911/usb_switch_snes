@@ -102,4 +102,7 @@ enum HID_ClassRequests_t
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
-#define HEX_CHAR(x) ((((x) + '0') > '9') ? ((x) + '7') : ((x) + '0'))
+//#define HEX_CHAR(x) ((((x) + '0') > '9') ? ((x) + '7') : ((x) + '0'))
+#define HEX_CHAR(x) (x + ((x <= 9) ? '0' : 'A'-10))
+//c &= 0x0f;
+//    c += (c <= 9) ? '0' : 'A'-10;

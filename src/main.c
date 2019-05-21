@@ -27,6 +27,7 @@ void dump_hex(const void *data, size_t size)
 
     *ptr++ = '\0';
     usb_send_serial_data(ptr, ptr - ascii);
+    usb_poll();
 }
 
 int main(void)
@@ -89,7 +90,6 @@ void input_sub_cmd_0x50()
     usb_send_serial_data("battery\n", strlen("battery\n"));
     usb_poll();
 
-
     uint8_t *ptr = (uint8_t *)&usbInputReport81;
     usb_out_buf[0x00] = kUsbReportIdInput81;
     memcpy(&usb_out_buf[1], ptr, sizeof(struct UsbInputReport81));
@@ -132,7 +132,11 @@ void sys_tick_handler(void)
     int len = usb_read_packet(ENDPOINT_HID_OUT, usb_in_buf, 0x40);
     if (len)
     {
-       // dump_hex(usb_in_buf, 0x40);
+        dump_hex(usb_in_buf, 0x40);
+        cmd = usb_in_buf[0];
+        //usb_send_serial_data("battery\n", strlen("battery\n"));
+        //usb_poll();
+        hw_led_toggle();
     }
 
     switch (cmd)

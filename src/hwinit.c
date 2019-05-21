@@ -15,6 +15,9 @@ void hw_led_off()
 
     gpio_set(GPIOB, GPIO12);
 }
+void hw_led_toggle() {
+    gpio_toggle(GPIOB, GPIO12);
+}
 
 void hw_init()
 {
