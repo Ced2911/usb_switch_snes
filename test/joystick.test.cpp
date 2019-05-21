@@ -1,6 +1,7 @@
 //#ifdef UNIT_TEST
-
+#include "doctest.h"
 #include "joystick.h"
+#include <unistd.h>
 
 void test_struct() {
     JoystickInput_t joystickInput = {
@@ -12,11 +13,17 @@ void test_struct() {
 }
 
 
-int main(int argc, char **argv) {
-    UNITY_BEGIN();
-    RUN_TEST(test_struct);
-    UNITY_END();
-    return 0;
-}
+SCENARIO("Test struct") {
 
+  GIVEN("a one second sleep duration") {
+    JoystickInput_t joystickInput = {
+        .report_id = 0x30
+    };
+    WHEN("call sleep with this duration") {
+      THEN("it's expected nobody interupted our rest") {
+        CHECK(sizeof(JoystickInput_t) == 63);
+      }
+    }
+  }
+} 
 //#endif
