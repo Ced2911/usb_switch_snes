@@ -436,7 +436,7 @@ static enum usbd_request_return_codes vendor_control_request(
     (void)complete;
     (void)dev;
 
-#if 1
+#if 0
     if ((req->bmRequestType == USB_REQ_TYPE_VENDOR))
     {
         *complete = hid_out_complete;

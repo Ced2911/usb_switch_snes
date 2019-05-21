@@ -7,15 +7,16 @@
 
 void hw_led_on()
 {
-
     gpio_clear(GPIOB, GPIO12);
 }
+
 void hw_led_off()
 {
-
     gpio_set(GPIOB, GPIO12);
 }
-void hw_led_toggle() {
+
+void hw_led_toggle()
+{
     gpio_toggle(GPIOB, GPIO12);
 }
 
@@ -37,10 +38,10 @@ void hw_init()
                   GPIO12);
 
     gpio_clear(GPIOB, GPIO12);
-    for (uint32_t j = 0; j < 10; j++)
-        for (unsigned i = 0; i < 800000; i++)
-        {
-            __asm__("nop");
-        }
+
+    for (unsigned i = 0; i < 800000; i++)
+    {
+        __asm__("nop");
+    }
     gpio_set(GPIOB, GPIO12);
 }
