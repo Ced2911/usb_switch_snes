@@ -97,12 +97,14 @@ enum HID_ClassRequests_t
     HID_REQ_SetProtocol = 0x0B
 };
 
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 #define max(a, b) \
     ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
 //#define HEX_CHAR(x) ((((x) + '0') > '9') ? ((x) + '7') : ((x) + '0'))
-#define HEX_CHAR(x) (x + ((x <= 9) ? '0' : 'A'-10))
+#define HEX_CHAR(x) (x + ((x <= 9) ? '0' : 'A' - 10))
 //c &= 0x0f;
 //    c += (c <= 9) ? '0' : 'A'-10;

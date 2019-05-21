@@ -16,15 +16,17 @@ void dump_hex(const void *data, size_t size)
     char ascii[0x40];
     char *ptr = ascii;
     size_t i;
-    size = max(size, 12);
+    size = min(size, 10);
     for (i = 0; i < size; ++i)
     {
         unsigned char b = ((unsigned char *)data)[i];
-        *ptr++ = (HEX_CHAR((b >> 4) & 0xf));
-        *ptr++ = (HEX_CHAR(b & 0xf));
-        *ptr++ = ' ';
+        //*ptr++ = (HEX_CHAR((b >> 4) & 0xf));
+        //*ptr++ = (HEX_CHAR(b & 0xf));
+        //*ptr++ = ' ';
+        ptr += sprintf(ptr, "%02x ", b);
     }
 
+    *ptr++ = '\r';
     *ptr++ = '\0';
     usb_send_serial_data(ptr, ptr - ascii);
     usb_poll();
@@ -87,38 +89,77 @@ struct UsbInputReport81 usbInputReport81;
 
 void input_sub_cmd_0x50()
 {
-    usb_send_serial_data("battery\n", strlen("battery\n"));
-    usb_poll();
-
-    uint8_t *ptr = (uint8_t *)&usbInputReport81;
+    struct Report81Response resp = {};
     usb_out_buf[0x00] = kUsbReportIdInput81;
-    memcpy(&usb_out_buf[1], ptr, sizeof(struct UsbInputReport81));
 
-    usb_out_buf[0x01] = 0xD0;
-    usb_out_buf[0x02] = 0x50;
-    usb_out_buf[0x03] = 0x06;
-    usb_out_buf[0x04] = 0x90;
+    resp.subcommand_ack = 0xD0;
+    resp.subcommand = 0x50;
+    resp.cmd_0x50.voltage = 0x0618;
+
+    memcpy(&usb_out_buf[1], &resp, sizeof(struct Report81Response));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+// Subcommand 0x02: Request device info
+void input_sub_cmd_0x02()
+{
+    struct Report81Response resp = {};
+    usb_out_buf[0x00] = kUsbReportIdInput81;
+
+    resp.subcommand_ack = 0x80;
+    resp.subcommand = 0x02;
+    /*
+    resp.data[0] = 0x03;
+    resp.data[1] = 0x48;
+    resp.data[2] = 0x01;
+    resp.data[3] = 0x02;
+    //mac
+    resp.data[4] = 0x48;
+    resp.data[5] = 0x48;
+    resp.data[6] = 0x48;
+    resp.data[7] = 0x48;
+    resp.data[8] = 0x48;
+    resp.data[9] = 0x48;
+    //unk
+    resp.data[10] = 0x01;
+    // spi color
+    resp.data[11] = 0x00;
+    */
+    resp.cmd_0x02.firmware_version = 0x0348;
+    resp.cmd_0x02.device_type = 0x03;
+    resp.cmd_0x02.unk_0 = 0x02;
+    for (int i = 0; i < 6; i++)
+        resp.cmd_0x02.mac[i] = i;
+
+    resp.cmd_0x02.unk_1 = 0x01;
+    resp.cmd_0x02.use_spi_colors = 0x00;
+
+    memcpy(&usb_out_buf[1], &resp, sizeof(struct Report81Response));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
 void input_sub_cmd_unk()
 {
-    uint8_t *ptr = (uint8_t *)&usbInputReport81;
+    struct ResponseX81 resp = {};
     usb_out_buf[0x00] = kUsbReportIdInput81;
-    memcpy(&usb_out_buf[1], ptr, sizeof(struct UsbInputReport81));
 
-    usb_out_buf[0x01] = 0x80;
-    usb_out_buf[0x02] = 0x03;
+    resp.subcommand_ack = ACK;
+    resp.subcommand = usb_in_buf[kSubCmdOffset];
+
+    memcpy(&usb_out_buf[1], &resp, sizeof(struct ResponseX81));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
 void input_report_0x81_sub0x01()
 {
 
-    switch (usb_in_buf[0x01])
+    switch (usb_in_buf[kSubCmdOffset])
     {
     case 0x50: // battery
         input_sub_cmd_0x50();
+        break;
+    case 0x02: // dev info
+        input_sub_cmd_0x02();
         break;
     default:
         input_sub_cmd_unk();

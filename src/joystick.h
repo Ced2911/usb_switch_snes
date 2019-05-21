@@ -12,6 +12,11 @@
 #define kUsbReportIdOutput80 0x80
 #define kUsbReportIdInput81 0x81
 
+#define kSubCmdOffset 10
+
+#define ACK 0x80
+#define NACK  0x00
+
 // Sub-types of the 0x80 output report, used for initialization.
 static const uint8_t kSubTypeRequestMac = 0x01;
 static const uint8_t kSubTypeHandshake = 0x02;
@@ -135,6 +140,15 @@ struct SpiReadReport
 };
 
 #pragma pack(1)
+struct ResponseX81
+{
+  struct ControllerData controller_data; // 12 bytes
+  uint8_t subcommand_ack;                // 0x90
+  uint8_t subcommand;                    // 0x10
+  uint8_t data[kMaxInputReportSizeBytes - 16];
+};
+
+#pragma pack(1)
 struct UsbInputReport81
 {
   uint8_t subtype;
@@ -158,6 +172,39 @@ struct brcm_hdr
   uint8_t timer;
   uint8_t rumble_l[4];
   uint8_t rumble_r[4];
+};
+
+
+#pragma pack(1)
+struct Report81Response {
+  struct ControllerData controller_data; // 12 bytes
+  uint8_t subcommand_ack;                // 0x90
+  uint8_t subcommand;                    // 0x10
+  union {
+    struct {
+      uint8_t arg0;      
+      uint8_t arg1;
+    } cmd_args;
+    struct {
+      uint16_t voltage;
+    } cmd_0x50;
+
+    struct {
+      uint16_t firmware_version;
+      uint8_t device_type;
+      uint8_t unk_0;
+      uint8_t mac[6];      
+      uint8_t unk_1;
+      uint8_t use_spi_colors;
+    } cmd_0x02;
+
+    struct {
+      uint16_t unk0;
+      uint8_t unk1;
+    } cmd_0x00;
+
+    uint8_t data[kMaxInputReportSizeBytes - 16];
+  };
 };
 
 #pragma pack(1)
