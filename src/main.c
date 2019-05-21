@@ -87,6 +87,7 @@ void input_report_0x30()
 
 struct UsbInputReport81 usbInputReport81;
 
+// Subcommand 0x50: Get regulated voltage
 void input_sub_cmd_0x50()
 {
     struct Report81Response resp = {};
@@ -94,7 +95,7 @@ void input_sub_cmd_0x50()
 
     resp.subcommand_ack = 0xD0;
     resp.subcommand = 0x50;
-    resp.cmd_0x50.voltage = 0x0618;
+    resp.cmd_0x50.voltage = battery_level_full;
 
     memcpy(&usb_out_buf[1], &resp, sizeof(struct Report81Response));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
@@ -106,28 +107,13 @@ void input_sub_cmd_0x02()
     struct Report81Response resp = {};
     usb_out_buf[0x00] = kUsbReportIdInput81;
 
-    resp.subcommand_ack = 0x80;
-    resp.subcommand = 0x02;
-    /*
-    resp.data[0] = 0x03;
-    resp.data[1] = 0x48;
-    resp.data[2] = 0x01;
-    resp.data[3] = 0x02;
-    //mac
-    resp.data[4] = 0x48;
-    resp.data[5] = 0x48;
-    resp.data[6] = 0x48;
-    resp.data[7] = 0x48;
-    resp.data[8] = 0x48;
-    resp.data[9] = 0x48;
-    //unk
-    resp.data[10] = 0x01;
-    // spi color
-    resp.data[11] = 0x00;
-    */
+    resp.subcommand_ack = 0x82;
+    resp.subcommand = 0x02;    
     resp.cmd_0x02.firmware_version = 0x0348;
     resp.cmd_0x02.device_type = 0x03;
     resp.cmd_0x02.unk_0 = 0x02;
+
+    // mac address
     for (int i = 0; i < 6; i++)
         resp.cmd_0x02.mac[i] = i;
 

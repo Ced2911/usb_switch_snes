@@ -15,7 +15,15 @@
 #define kSubCmdOffset 10
 
 #define ACK 0x80
-#define NACK  0x00
+#define NACK 0x00
+
+enum battery_level
+{
+  battery_level_critical = 0x528,
+  battery_level_low = 0x5C0,
+  battery_level_medium = 0x600,
+  battery_level_full = 0x690,
+};
 
 // Sub-types of the 0x80 output report, used for initialization.
 static const uint8_t kSubTypeRequestMac = 0x01;
@@ -174,31 +182,35 @@ struct brcm_hdr
   uint8_t rumble_r[4];
 };
 
-
 #pragma pack(1)
-struct Report81Response {
+struct Report81Response
+{
   struct ControllerData controller_data; // 12 bytes
   uint8_t subcommand_ack;                // 0x90
   uint8_t subcommand;                    // 0x10
   union {
-    struct {
-      uint8_t arg0;      
+    struct
+    {
+      uint8_t arg0;
       uint8_t arg1;
     } cmd_args;
-    struct {
+    struct
+    {
       uint16_t voltage;
     } cmd_0x50;
 
-    struct {
+    struct
+    {
       uint16_t firmware_version;
       uint8_t device_type;
       uint8_t unk_0;
-      uint8_t mac[6];      
+      uint8_t mac[6];
       uint8_t unk_1;
       uint8_t use_spi_colors;
     } cmd_0x02;
 
-    struct {
+    struct
+    {
       uint16_t unk0;
       uint8_t unk1;
     } cmd_0x00;
