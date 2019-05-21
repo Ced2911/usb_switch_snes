@@ -43,7 +43,6 @@ int main(void)
     systick_interrupt_enable();
     systick_counter_enable();
 
-    usb_send_serial_data("Ready\n\0", 7);
     while (1)
         usb_poll();
 }
@@ -108,7 +107,7 @@ void input_sub_cmd_0x02()
     usb_out_buf[0x00] = kUsbReportIdInput81;
 
     resp.subcommand_ack = 0x82;
-    resp.subcommand = 0x02;    
+    resp.subcommand = 0x02;
     resp.cmd_0x02.firmware_version = 0x0348;
     resp.cmd_0x02.device_type = 0x03;
     resp.cmd_0x02.unk_0 = 0x02;
@@ -121,6 +120,26 @@ void input_sub_cmd_0x02()
     resp.cmd_0x02.use_spi_colors = 0x00;
 
     memcpy(&usb_out_buf[1], &resp, sizeof(struct Report81Response));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+// Subcommand 0x10: SPI flash read
+void input_sub_cmd_0x10()
+{
+    struct SpiReadReport resp = {};
+    struct brcm_cmd_01 *spi_cmd = (struct brcm_cmd_01 *)&usb_in_buf[kSubCmdOffset];
+
+    uint8_t len = spi_cmd->spi_data.size & 0x1D;
+    uint32_t offset = spi_cmd->spi_data.offset;
+
+    usb_out_buf[0x00] = 0x21;
+
+    resp.subcommand_ack = 0x90;
+    resp.subcommand = 0x10;
+    resp.addr = offset;
+    resp.length = len;
+
+    memcpy(&usb_out_buf[1], &resp, sizeof(struct SpiReadReport));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
@@ -145,7 +164,12 @@ void input_report_0x81_sub0x01()
         input_sub_cmd_0x50();
         break;
     case 0x02: // dev info
+        hw_led_toggle();
         input_sub_cmd_0x02();
+        break;
+    // Spi read
+    case 0x10:
+        input_sub_cmd_0x10();
         break;
     default:
         input_sub_cmd_unk();
@@ -159,11 +183,10 @@ void sys_tick_handler(void)
     int len = usb_read_packet(ENDPOINT_HID_OUT, usb_in_buf, 0x40);
     if (len)
     {
-        dump_hex(usb_in_buf, 0x40);
+        // dump_hex(usb_in_buf, 0x40);
         cmd = usb_in_buf[0];
         //usb_send_serial_data("battery\n", strlen("battery\n"));
         //usb_poll();
-        hw_led_toggle();
     }
 
     switch (cmd)

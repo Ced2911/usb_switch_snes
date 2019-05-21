@@ -140,9 +140,12 @@ struct SpiReadReport
   struct ControllerData controller_data; // 12 bytes
   uint8_t subcommand_ack;                // 0x90
   uint8_t subcommand;                    // 0x10
+  /*
   uint8_t addrl;
   uint8_t addrh;
   uint8_t padding[2]; // 0x00 0x00
+  */
+  uint32_t addr;
   uint8_t length;
   uint8_t spi_data[kMaxInputReportSizeBytes - kSpiDataOffset];
 };
