@@ -17,12 +17,26 @@
 #define ACK 0x80
 #define NACK 0x00
 
+enum voltage_level
+{
+  voltage_level_critical = 0x528,
+  voltage_level_low = 0x5C0,
+  voltage_level_medium = 0x600,
+  voltage_level_full = 0x690,
+};
 enum battery_level
 {
-  battery_level_critical = 0x528,
-  battery_level_low = 0x5C0,
-  battery_level_medium = 0x600,
-  battery_level_full = 0x690,
+  battery_level_charging = 0x1,
+  battery_level_empty = 0x0,
+  battery_level_critical = 0x2,
+  battery_level_low = 0x04,
+  battery_level_medium = 0x6,
+  battery_level_full = 0x8,
+};
+
+enum joycon_connexion {
+  joycon_connexion_bt = 0x03 << 1,
+  joycon_connexion_usb = 0,
 };
 
 // Sub-types of the 0x80 output report, used for initialization.

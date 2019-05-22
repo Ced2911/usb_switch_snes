@@ -448,13 +448,16 @@ static enum usbd_request_return_codes vendor_control_request(
 #endif
 }
 
+static void hid_callback_complete(usbd_device * dev, struct usb_setup_data * data) {    
+    systick_interrupt_enable();
+}
+
 static enum usbd_request_return_codes hid_control_request(
     usbd_device *dev, struct usb_setup_data *req,
     uint8_t **buf, uint16_t *len,
     void (**complete)(usbd_device *, struct usb_setup_data *))
 {
-    (void)complete;
-    (void)dev;
+    *complete = hid_callback_complete;
 
     if ((req->bmRequestType == 0x81) &&
         (req->bRequest == USB_REQ_GET_DESCRIPTOR) &&

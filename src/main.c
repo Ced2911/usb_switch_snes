@@ -32,20 +32,25 @@ void dump_hex(const void *data, size_t size)
     usb_poll();
 }
 
+void systick_iterrupt_init() {
+
+    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
+    /* SysTick interrupt every N clock pulses: set reload to N-1 */
+    systick_set_reload(99999);
+    systick_counter_enable();
+}
+
 int main(void)
 {
     hw_init();
     usb_setup();
 
-    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-    /* SysTick interrupt every N clock pulses: set reload to N-1 */
-    systick_set_reload(99999);
-    systick_interrupt_enable();
-    systick_counter_enable();
+    systick_iterrupt_init();
 
     while (1)
         usb_poll();
 }
+
 
 static uint8_t usb_in_buf[0x40];
 static uint8_t usb_out_buf[0x40];
@@ -73,9 +78,12 @@ void input_report_0x30()
     controllerDataReport.controller_data.analog[4] = x;
     controllerDataReport.controller_data.analog[5] = x;
 
-    controllerDataReport.controller_data.battery_level = 0x6;
-    controllerDataReport.controller_data.connection_info = 0x1;
-    controllerDataReport.controller_data.vibrator_input_report = 0x82;
+    controllerDataReport.controller_data.button_r = x > 0;
+    controllerDataReport.controller_data.button_l = x > 0;
+
+    controllerDataReport.controller_data.battery_level = battery_level_charging | battery_level_full;
+    controllerDataReport.controller_data.connection_info = joycon_connexion_usb;
+    controllerDataReport.controller_data.vibrator_input_report = 0x70;
 
     // report ID
     usb_out_buf[0x00] = kReportIdInput30;
@@ -94,7 +102,7 @@ void input_sub_cmd_0x50()
 
     resp.subcommand_ack = 0xD0;
     resp.subcommand = 0x50;
-    resp.cmd_0x50.voltage = battery_level_full;
+    resp.cmd_0x50.voltage = voltage_level_full;
 
     memcpy(&usb_out_buf[1], &resp, sizeof(struct Report81Response));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
@@ -108,7 +116,7 @@ void input_sub_cmd_0x02()
 
     resp.subcommand_ack = 0x82;
     resp.subcommand = 0x02;
-    resp.cmd_0x02.firmware_version = 0x0348;
+    resp.cmd_0x02.firmware_version = 0x4803;
     resp.cmd_0x02.device_type = 0x03;
     resp.cmd_0x02.unk_0 = 0x02;
 
