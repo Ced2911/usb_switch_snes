@@ -32,7 +32,8 @@ void dump_hex(const void *data, size_t size)
     usb_poll();
 }
 
-void systick_iterrupt_init() {
+void systick_iterrupt_init()
+{
 
     systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
     /* SysTick interrupt every N clock pulses: set reload to N-1 */
@@ -51,7 +52,6 @@ int main(void)
         usb_poll();
 }
 
-
 static uint8_t usb_in_buf[0x40];
 static uint8_t usb_out_buf[0x40];
 static struct ControllerDataReport controllerDataReport;
@@ -62,7 +62,7 @@ void hid_rx_cb(uint8_t *buf, uint16_t len)
     dump_hex(buf, len);
 }
 
-void input_report_0x30()
+void fill_input_report(struct ControllerDataReport *controllerDataReport)
 {
     static int x = 0;
     static int dir = 1;
@@ -72,33 +72,82 @@ void input_report_0x30()
     if (x < -30)
         dir = -dir;
 
-    uint8_t *ptr = (uint8_t *)&controllerDataReport;
-    memset(&controllerDataReport, 0, sizeof(struct ControllerDataReport));
+    // increment tick by 3
+    tick += 3;
 
-    controllerDataReport.controller_data.analog[4] = x;
-    controllerDataReport.controller_data.analog[5] = x;
+    controllerDataReport->controller_data.timestamp = tick;
 
-    controllerDataReport.controller_data.button_r = x > 0;
-    controllerDataReport.controller_data.button_l = x > 0;
+    controllerDataReport->controller_data.analog[4] = x;
+    controllerDataReport->controller_data.analog[5] = x;
 
-    controllerDataReport.controller_data.battery_level = battery_level_charging | battery_level_full;
-    controllerDataReport.controller_data.connection_info = joycon_connexion_usb;
-    controllerDataReport.controller_data.vibrator_input_report = 0x70;
+    controllerDataReport->controller_data.button_r = x > 0;
+    controllerDataReport->controller_data.button_l = x > 0;
 
+    controllerDataReport->controller_data.battery_level = battery_level_charging | battery_level_full;
+    controllerDataReport->controller_data.connection_info = joycon_connexion_usb;
+    controllerDataReport->controller_data.vibrator_input_report = 0x70;
+}
+
+// Standard full mode - input reports with IMU data instead of subcommand replies. Pushes current state @60Hz, or @120Hz if Pro Controller.
+void input_report_0x30()
+{
     // report ID
     usb_out_buf[0x00] = kReportIdInput30;
-    //memcpy(&usbbuf[1], &ptr[2], sizeof(struct ControllerDataReport) - 2);
-    memcpy(&usb_out_buf[1], ptr, sizeof(struct ControllerDataReport));
+
+    fill_input_report((struct ControllerDataReport *)&usb_out_buf[0x01]);
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
-struct UsbInputReport81 usbInputReport81;
+void input_report_0x3F()
+{
+    static int x = 0;
+    static int dir = 1;
+    x += dir;
+    if (x > 30)
+        dir = -dir;
+    if (x < -30)
+        dir = -dir;
+
+    // report ID
+    usb_out_buf[0x00] = 0x3F;
+
+    // btn status
+    if (x > 0)
+    {
+        usb_out_buf[0x01] = 0x10 | 0x20; // sr // sl
+        usb_out_buf[0x02] = 0x00;
+    }
+    else
+    {
+        usb_out_buf[0x01] = 0x00;
+        usb_out_buf[0x02] = 0x00;
+    }
+
+    // hat data
+    usb_out_buf[0x03] = 0x08;
+
+    // filler
+    usb_out_buf[0x04] = 0x00;
+    usb_out_buf[0x05] = 0x80;
+    usb_out_buf[0x06] = 0x00;
+    usb_out_buf[0x07] = 0x80;
+    usb_out_buf[0x08] = 0x00;
+    usb_out_buf[0x09] = 0x80;
+    usb_out_buf[0x10] = 0x00;
+    usb_out_buf[0x11] = 0x80;
+
+    memset(usb_out_buf, 0xFF, 0x40);
+
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
 
 // Subcommand 0x50: Get regulated voltage
 void input_sub_cmd_0x50()
 {
     struct Report81Response resp = {};
     usb_out_buf[0x00] = kUsbReportIdInput81;
+
+    fill_input_report(&resp.controller_data);
 
     resp.subcommand_ack = 0xD0;
     resp.subcommand = 0x50;
@@ -113,6 +162,8 @@ void input_sub_cmd_0x02()
 {
     struct Report81Response resp = {};
     usb_out_buf[0x00] = kUsbReportIdInput81;
+
+    fill_input_report(&resp.controller_data);
 
     resp.subcommand_ack = 0x82;
     resp.subcommand = 0x02;
@@ -140,6 +191,8 @@ void input_sub_cmd_0x10()
     uint8_t len = spi_cmd->spi_data.size & 0x1D;
     uint32_t offset = spi_cmd->spi_data.offset;
 
+    fill_input_report(&resp.controller_data);
+
     usb_out_buf[0x00] = 0x21;
 
     resp.subcommand_ack = 0x90;
@@ -151,13 +204,42 @@ void input_sub_cmd_0x10()
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
+// Subcommand 0x03: Set input report mode
+void input_sub_cmd_0x03()
+{
+    struct brcm_cmd_01 *joycmd = (struct brcm_cmd_01 *)&usb_in_buf[kSubCmdOffset];
+    struct ResponseX81 resp = {};
+    usb_out_buf[0x00] = kUsbReportIdInput81;
+
+    resp.subcommand_ack = ACK;
+    resp.subcommand = 0x03;
+
+    joyStickMode = usb_in_buf[11];
+
+    fill_input_report(&resp.controller_data);
+
+    memcpy(&usb_out_buf[1], &resp, sizeof(struct ResponseX81));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+
+#if 0
+    // dbg !
+    char dbg[0x40];
+    sprintf(dbg, "joyStickMode: %02x\n", joyStickMode);
+    usb_poll();
+    usb_send_serial_data(dbg, strlen(dbg));
+    usb_poll();
+#endif
+}
+
 void input_sub_cmd_unk()
 {
+    struct brcm_cmd_01 *joycmd = (struct brcm_cmd_01 *)&usb_in_buf[kSubCmdOffset];
     struct ResponseX81 resp = {};
     usb_out_buf[0x00] = kUsbReportIdInput81;
 
     resp.subcommand_ack = ACK;
     resp.subcommand = usb_in_buf[kSubCmdOffset];
+    fill_input_report(&resp.controller_data);
 
     memcpy(&usb_out_buf[1], &resp, sizeof(struct ResponseX81));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
@@ -179,6 +261,10 @@ void input_report_0x81_sub0x01()
     case 0x10:
         input_sub_cmd_0x10();
         break;
+    // Spi read
+    case 0x03:
+        input_sub_cmd_0x03();
+        break;
     default:
         input_sub_cmd_unk();
         break;
@@ -187,9 +273,9 @@ void input_report_0x81_sub0x01()
 
 void sys_tick_handler(void)
 {
-    uint8_t cmd = kReportIdInput30;
+    uint8_t cmd = joyStickMode;
     int len = usb_read_packet(ENDPOINT_HID_OUT, usb_in_buf, 0x40);
-    if (len)
+    if (len > 1)
     {
         // dump_hex(usb_in_buf, 0x40);
         cmd = usb_in_buf[0];
@@ -197,10 +283,22 @@ void sys_tick_handler(void)
         //usb_poll();
     }
 
+#if 1
+    // dbg !
+    char dbg[0x40];
+    sprintf(dbg, "joyStickMode: %02x\n", cmd);
+    usb_poll();
+    usb_send_serial_data(dbg, strlen(dbg));
+    usb_poll();
+#endif
+
     switch (cmd)
     {
     case kReportIdOutput01:
         input_report_0x81_sub0x01();
+        break;
+    case 0x3F:
+        input_report_0x3F();
         break;
     case kReportIdOutput10:
     case kUsbReportIdOutput80:
@@ -210,3 +308,5 @@ void sys_tick_handler(void)
         break;
     }
 }
+
+uint8_t joyStickMode = kReportIdInput30;
