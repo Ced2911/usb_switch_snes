@@ -245,35 +245,70 @@ void input_sub_cmd_unk()
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
-void input_report_0x81_sub0x01()
+void output_mac_addr()
 {
+    const uint8_t mac_addr[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55};
+    
+    struct MacAddressReport *report = &usb_out_buf[0x01];
+    
+    usb_out_buf[0x00] = kUsbReportIdInput81;
 
-    switch (usb_in_buf[kSubCmdOffset])
+
+    report->subtype = 0x01;
+    report->device_type = kUsbDeviceTypeChargingGripJoyConL;
+    memcpy(report->mac_data , mac_addr, sizeof(mac_addr));
+
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+void output_passthrought()
+{
+    usb_out_buf[0x00] = kUsbReportIdInput81;
+    usb_out_buf[0x01] = usb_in_buf[1];
+
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+void output_report_0x80()
+{
+    switch (usb_in_buf[1])
     {
-    case 0x50: // battery
-        input_sub_cmd_0x50();
-        break;
-    case 0x02: // dev info
+    case 0x01: // mac addr
         hw_led_toggle();
-        input_sub_cmd_0x02();
+        output_mac_addr();
         break;
-    // Spi read
-    case 0x10:
-        input_sub_cmd_0x10();
-        break;
-    // Spi read
+        //handshake//baudrate
+    case 0x02:
     case 0x03:
-        input_sub_cmd_0x03();
+    // usb timeout
+    case 0x04:
+    case 0x05:
+        output_passthrought();
+        break;
+        // custom ?
+    case 0x91:
+    case 0x92:
+        output_passthrought();
         break;
     default:
-        input_sub_cmd_unk();
+        output_passthrought();
         break;
     }
 }
 
+void output_report_0x10()
+{
+    /** nothing **/
+}
+
+void output_report_0x01()
+{
+    /** nothing **/
+}
+
 void sys_tick_handler(void)
 {
-    uint8_t cmd = joyStickMode;
+    uint8_t cmd = kReportIdInput30;
     int len = usb_read_packet(ENDPOINT_HID_OUT, usb_in_buf, 0x40);
     if (len > 1)
     {
@@ -295,13 +330,16 @@ void sys_tick_handler(void)
     switch (cmd)
     {
     case kReportIdOutput01:
-        input_report_0x81_sub0x01();
-        break;
-    case 0x3F:
-        input_report_0x3F();
+        output_report_0x01();
         break;
     case kReportIdOutput10:
+        output_report_0x10();
+        break;
+
     case kUsbReportIdOutput80:
+        output_report_0x80();
+        break;
+
     case kReportIdInput30:
     default:
         input_report_0x30();
