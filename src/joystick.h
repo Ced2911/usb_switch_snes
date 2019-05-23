@@ -98,8 +98,6 @@ static const int kVibrationFrequencyHzMin = 41;
 static const int kVibrationFrequencyHzMax = 1253;
 static const int kVibrationAmplitudeMax = 1000;
 
-extern uint8_t joyStickMode;
-
 #pragma pack(1)
 struct ControllerData
 {

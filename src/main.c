@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
@@ -46,7 +47,7 @@ int main(void)
     hw_init();
     usb_setup();
 
-    systick_iterrupt_init();
+    //systick_iterrupt_init();
 
     while (1)
         usb_poll();
@@ -175,7 +176,114 @@ void output_report_0x10()
     /** nothing **/
 }
 
+static uint8_t joyStickMode = kReportIdInput30;
+
 void output_report_0x01_unknown_subcmd()
+{
+    struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+    fill_input_report(&resp->controller_data);
+    resp->subcommand_ack = 0x80;
+    resp->subcommand = 0x03;
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+// Subcommand 0x02: Request device info
+void output_report_0x01_get_device_info()
+{
+    struct Report81Response resp = {};
+    usb_out_buf[0x00] = kUsbReportIdInput81;
+
+    resp.subcommand_ack = 0x82;
+    resp.subcommand = 0x02;
+    resp.cmd_0x02.firmware_version = 0x4803;
+    resp.cmd_0x02.device_type = 0x03;
+    resp.cmd_0x02.unk_0 = 0x02;
+
+    // mac address
+    for (int i = 0; i < 6; i++)
+        resp.cmd_0x02.mac[i] = i;
+
+    resp.cmd_0x02.unk_1 = 0x01;
+    resp.cmd_0x02.use_spi_colors = 0x00;
+
+    memcpy(&usb_out_buf[1], &resp, sizeof(struct Report81Response));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+/* todo */
+void output_report_0x01_set_report_mode()
+{
+    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+    fill_input_report(&resp->controller_data);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+/* todo */
+void output_report_0x01_readspi()
+{
+    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+    fill_input_report(&resp->controller_data);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+/* todo */
+void output_report_0x01_writespi()
+{
+    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+    fill_input_report(&resp->controller_data);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+/* todo */
+void output_report_0x01_set_lights()
+{
+    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+    fill_input_report(&resp->controller_data);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+/* todo */
+void output_report_0x01_set_homelight()
+{
+    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+    fill_input_report(&resp->controller_data);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+/* todo */
+void output_report_0x01_set_immu()
+{
+    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+    fill_input_report(&resp->controller_data);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+/* todo */
+void output_report_0x01_set_immu_sensitivity()
+{
+    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+    fill_input_report(&resp->controller_data);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+/* todo */
+void output_report_0x01_set_vibration()
 {
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
@@ -191,8 +299,43 @@ void output_report_0x01()
 
     switch (subCmd)
     {
+        // get device info
+    case 0x02:
+        output_report_0x01_get_device_info();
+        break;
+        // Set input report mode
+    case 0x03:
+        output_report_0x01_set_report_mode();
+        break;
+    // Read Spi
+    case 0x10:
+        output_report_0x01_readspi();
+        break;
+    case 0x11:
+        output_report_0x01_writespi();
+        break;
+    // Set Lights
+    case 0x30:
+        output_report_0x01_set_lights();
+        break;
+    // Set Home Light
+    case 0x38:
+        output_report_0x01_set_homelight();
+        break;
+    // Set Immu
+    case 0x40:
+        output_report_0x01_set_immu();
+        break;
+    // Set Immu Sensitivity
+    case 0x41:
+        output_report_0x01_set_immu_sensitivity();
+        break;
+    // Set Vibration
+    case 0x48:
+        output_report_0x01_set_vibration();
+        break;
+
     case 0x00:
-    // unknown
     case 0x33:
     default:
         output_report_0x01_unknown_subcmd();
@@ -240,5 +383,3 @@ void sys_tick_handler(void)
         break;
     }
 }
-
-uint8_t joyStickMode = kReportIdInput30;

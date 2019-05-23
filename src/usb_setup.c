@@ -449,7 +449,7 @@ static enum usbd_request_return_codes vendor_control_request(
 }
 
 static void hid_callback_complete(usbd_device * dev, struct usb_setup_data * data) {    
-    systick_interrupt_enable();
+    // systick_interrupt_enable();
 }
 
 static enum usbd_request_return_codes hid_control_request(
