@@ -47,7 +47,7 @@ int main(void)
     hw_init();
     usb_setup();
 
-    //systick_iterrupt_init();
+    systick_iterrupt_init();
 
     while (1)
         usb_poll();
@@ -82,6 +82,15 @@ void fill_input_report(struct ControllerData *controller_data)
 
     controller_data->button_r = x > 0;
     controller_data->button_l = x > 0;
+
+    controller_data->button_zl = x > 0;
+    controller_data->button_zr = x > 0;
+
+    controller_data->button_left_sl = x > 0;
+    controller_data->button_left_sr = x > 0;
+
+    controller_data->button_right_sl = x > 0;
+    controller_data->button_right_sr = x > 0;
 
     controller_data->battery_level = battery_level_charging | battery_level_full;
     controller_data->connection_info = joycon_connexion_usb;
@@ -212,6 +221,7 @@ void output_report_0x01_get_device_info()
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
+// Subcommand 0x03: Set input report mode
 /* todo */
 void output_report_0x01_set_report_mode()
 {
@@ -349,10 +359,7 @@ void sys_tick_handler(void)
     int len = usb_read_packet(ENDPOINT_HID_OUT, usb_in_buf, 0x40);
     if (len > 1)
     {
-        // dump_hex(usb_in_buf, 0x40);
         cmd = usb_in_buf[0];
-        //usb_send_serial_data("battery\n", strlen("battery\n"));
-        //usb_poll();
     }
 
 #if 1

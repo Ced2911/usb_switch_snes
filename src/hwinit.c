@@ -56,7 +56,9 @@ void hw_init()
 #else
     rcc_clock_setup_in_hsi_out_48mhz();
 
-    rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOB);
+	rcc_periph_clock_enable(RCC_GPIOC);
 
     gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
                   GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);

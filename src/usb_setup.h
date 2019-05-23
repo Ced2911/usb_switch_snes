@@ -2,7 +2,7 @@
 
 
 // #define INCLUDE_DFU_INTERFACE
-#define INCLUDE_CDC_INTERFACE
+// #define INCLUDE_CDC_INTERFACE
 
 enum
 {
