@@ -142,7 +142,6 @@ void input_sub_cmd_0x10()
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
-
 // 80 01
 void output_mac_addr()
 {
@@ -166,7 +165,6 @@ void output_mac_addr()
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 
 #endif
-
 }
 
 // passthrough
@@ -233,23 +231,22 @@ void output_report_0x01_unknown_subcmd()
 // Subcommand 0x02: Request device info
 void output_report_0x01_get_device_info()
 {
-    struct Report81Response resp = {};
+    struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     usb_out_buf[0x00] = kUsbReportIdInput81;
 
-    resp.subcommand_ack = 0x82;
-    resp.subcommand = 0x02;
-    resp.cmd_0x02.firmware_version = 0x4803;
-    resp.cmd_0x02.device_type = 0x03;
-    resp.cmd_0x02.unk_0 = 0x02;
+    resp->subcommand_ack = 0x82;
+    resp->subcommand = 0x02;
+    resp->cmd_0x02.firmware_version = 0x4803;
+    resp->cmd_0x02.device_type = 0x03;
+    resp->cmd_0x02.unk_0 = 0x02;
 
     // mac address
     for (int i = 0; i < 6; i++)
-        resp.cmd_0x02.mac[i] = i;
+        resp->cmd_0x02.mac[i] = i;
 
-    resp.cmd_0x02.unk_1 = 0x01;
-    resp.cmd_0x02.use_spi_colors = 0x00;
+    resp->cmd_0x02.unk_1 = 0x01;
+    resp->cmd_0x02.use_spi_colors = 0x00;
 
-    memcpy(&usb_out_buf[1], &resp, sizeof(struct Report81Response));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
@@ -258,13 +255,18 @@ void output_report_0x01_get_device_info()
 void output_report_0x01_set_report_mode()
 {
     usart_send_str("output_report_0x01_set_report_mode");
-    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
+
+    // acknowledge
+    resp->subcommand_ack = 0x82;
+    resp->subcommand = 0x03;
+
+
     fill_input_report(&resp->controller_data);
 
-   // joyStickMode = usb_in_buf[11];
-   
+    // joyStickMode = usb_in_buf[11];
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
