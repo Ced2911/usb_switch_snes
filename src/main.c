@@ -11,6 +11,7 @@
 #include "joystick.h"
 #include "hwinit.h"
 #include "usb_setup.h"
+#include "usart.h"
 
 void dump_hex(const void *data, size_t size)
 {
@@ -45,12 +46,16 @@ void systick_iterrupt_init()
 int main(void)
 {
     hw_init();
-    usb_setup();
+    usart_init();
+    while(1)
+        usart_send_str("Bam\n");
+    // usb_setup();
 
     systick_iterrupt_init();
 
-    while (1)
+    while (1) {
         usb_poll();
+    }
 }
 
 static uint8_t usb_in_buf[0x40];
