@@ -27,7 +27,6 @@ void usart_send_str(char *p)
     char *ptr = p;
     do
     {
-
         usart_send_blocking(USART2, *ptr);
     } while (*ptr++ != 0);
 

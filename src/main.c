@@ -13,12 +13,14 @@
 #include "usb_setup.h"
 #include "usart.h"
 
+static char ascii_buffer[0x100] = {};
+
 void dump_hex(const void *data, size_t size)
 {
-    char ascii[0x40];
-    char *ptr = ascii;
+
+    char *ptr = ascii_buffer;
     size_t i;
-    size = min(size, 10);
+    size = min(size, 0x100);
     for (i = 0; i < size; ++i)
     {
         unsigned char b = ((unsigned char *)data)[i];
@@ -29,9 +31,12 @@ void dump_hex(const void *data, size_t size)
     }
 
     *ptr++ = '\r';
-    *ptr++ = '\0';
-    usb_send_serial_data(ptr, ptr - ascii);
-    usb_poll();
+    *ptr++ = '\n';
+    *ptr++ = 0;
+
+    //usb_send_serial_data(ptr, ptr - ascii);
+    //usb_poll();
+    usart_send_str(ascii_buffer);
 }
 
 void systick_iterrupt_init()
@@ -47,13 +52,16 @@ int main(void)
 {
     hw_init();
     usart_init();
-    while(1)
-        usart_send_str("Bam\n");
-    // usb_setup();
 
+    //while(1)
+    //    usart_send_str("Bam\n");
+    usb_setup();
     systick_iterrupt_init();
 
-    while (1) {
+    usart_send_str("start");
+
+    while (1)
+    {
         usb_poll();
     }
 }
@@ -134,8 +142,12 @@ void input_sub_cmd_0x10()
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
+
+// 80 01
 void output_mac_addr()
 {
+    usart_send_str("output_mac_addr");
+#if 0
     const uint8_t mac_addr[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55};
 
     struct MacAddressReport *report = &usb_out_buf[0x01];
@@ -145,17 +157,32 @@ void output_mac_addr()
     report->subtype = 0x01;
     report->device_type = kUsbDeviceTypeChargingGripJoyConL;
     memcpy(report->mac_data, mac_addr, sizeof(mac_addr));
-
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+
+#else
+    // hard coded response !!!
+    const uint8_t response_h[] = {0x81, 0x01, 0x00, 0x02, 0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
+    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+
+#endif
+
 }
 
 // passthrough
 void output_passthrough()
 {
+    usart_send_str("passthrough");
+#if 0
     usb_out_buf[0x00] = kUsbReportIdInput81;
     usb_out_buf[0x01] = usb_in_buf[1];
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#else
+    const uint8_t response_h[] = {0x81, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#endif
 }
 
 void output_report_0x80()
@@ -230,10 +257,15 @@ void output_report_0x01_get_device_info()
 /* todo */
 void output_report_0x01_set_report_mode()
 {
+    usart_send_str("output_report_0x01_set_report_mode");
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
     fill_input_report(&resp->controller_data);
+
+   // joyStickMode = usb_in_buf[11];
+   
+
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
@@ -360,20 +392,19 @@ void output_report_0x01()
 
 void sys_tick_handler(void)
 {
-    uint8_t cmd = kReportIdInput30;
+    uint8_t cmd = joyStickMode;
     int len = usb_read_packet(ENDPOINT_HID_OUT, usb_in_buf, 0x40);
     if (len > 1)
     {
         cmd = usb_in_buf[0];
+        dump_hex(usb_in_buf, 0x40);
     }
 
-#if 1
+#if 0
     // dbg !
     char dbg[0x40];
-    sprintf(dbg, "joyStickMode: %02x\n", cmd);
-    usb_poll();
-    usb_send_serial_data(dbg, strlen(dbg));
-    usb_poll();
+    sprintf(dbg, "joyStickMode: %02x", cmd);
+    usart_send_str(dbg);
 #endif
 
     switch (cmd)
