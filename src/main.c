@@ -86,7 +86,7 @@ void fill_input_report(struct ControllerData *controller_data)
         dir = -dir;
 
     // increment tick by 3
-    tick += 3;
+    tick ++;
 
     controller_data->timestamp = tick;
 
@@ -105,8 +105,8 @@ void fill_input_report(struct ControllerData *controller_data)
     controller_data->button_right_sl = x > 0;
     controller_data->button_right_sr = x > 0;
 
-    controller_data->battery_level = battery_level_charging | battery_level_full;
-    controller_data->connection_info = joycon_connexion_usb;
+    controller_data->battery_level = /*battery_level_charging | */battery_level_full;
+    controller_data->connection_info = 0x1;
     controller_data->vibrator_input_report = 0x70;
 }
 
@@ -160,7 +160,7 @@ void output_mac_addr()
 
 #else
     // hard coded response !!!
-    const uint8_t response_h[] = {0x81, 0x01, 0x00, 0x02, 0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
+    const uint8_t response_h[] = {0x81, 0x01, 0x00, kUsbDeviceTypeProController, 0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
     memcpy(usb_out_buf, response_h, sizeof(response_h));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 
@@ -183,6 +183,55 @@ void output_passthrough()
 #endif
 }
 
+// passthrough
+void output_handshake()
+{
+    usart_send_str("output_handshake");
+#if 0
+    usb_out_buf[0x00] = kUsbReportIdInput81;
+    usb_out_buf[0x01] = usb_in_buf[1];
+
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#else
+    const uint8_t response_h[] = {0x81, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#endif
+}
+
+
+// baudrate
+void output_baudrate()
+{
+    usart_send_str("output_baudrate");
+#if 0
+    usb_out_buf[0x00] = kUsbReportIdInput81;
+    usb_out_buf[0x01] = usb_in_buf[1];
+
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#else
+    const uint8_t response_h[] = {0x81, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#endif
+}
+
+// baudrate
+void output_hid()
+{
+    usart_send_str("output_hid");
+#if 0
+    usb_out_buf[0x00] = kUsbReportIdInput81;
+    usb_out_buf[0x01] = usb_in_buf[1];
+
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#else
+    const uint8_t response_h[] = {0x81, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#endif
+}
+
 void output_report_0x80()
 {
     switch (usb_in_buf[1])
@@ -193,9 +242,15 @@ void output_report_0x80()
         break;
         //handshake//baudrate
     case 0x02:
+        output_handshake();
+        break;
     case 0x03:
+        output_baudrate();
+        break;
     // usb timeout
     case 0x04:
+        output_hid();
+        break;
     case 0x05:
         output_passthrough();
         break;
@@ -224,7 +279,8 @@ void output_report_0x01_unknown_subcmd()
     usb_out_buf[0x00] = kReportIdInput21;
     fill_input_report(&resp->controller_data);
     resp->subcommand_ack = 0x80;
-    resp->subcommand = 0x03;
+    resp->subcommand = 0x00;
+    resp->data[0] = 0x03;
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
@@ -245,11 +301,14 @@ void output_report_0x01_get_device_info()
     // for (int i = 0; i < 6; i++)
     //    resp->cmd_0x02.mac[i] = i;
 
-    const uint8_t response_h[] = {0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
+    const uint8_t response_h[] = {0x7c, 0xbb, 0x8a, 0xea, 0x30, 0x57 };
     memcpy(resp->cmd_0x02.mac, response_h, sizeof(response_h));
 
     resp->cmd_0x02.unk_1 = 0x01;
     resp->cmd_0x02.use_spi_colors = 0x01;
+
+    
+    fill_input_report(&resp->controller_data);
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
@@ -402,6 +461,8 @@ void sys_tick_handler(void)
     if (len > 1)
     {
         cmd = usb_in_buf[0];
+        
+        usart_send_str("Packet received from switch: ");
         dump_hex(usb_in_buf, 0x40);
     }
 
@@ -429,5 +490,11 @@ void sys_tick_handler(void)
     default:
         input_report_0x30();
         break;
+    }
+
+    if (cmd != joyStickMode) {
+        
+        usart_send_str("Response: ");
+        dump_hex(usb_out_buf, 0x40);
     }
 }
