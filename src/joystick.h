@@ -232,7 +232,29 @@ struct Report81Response
       uint8_t unk1;
     } cmd_0x00;
 
+    struct
+    {
+      //uint8_t length;
+      uint16_t address;
+      uint8_t spi_data[0x1D];
+    } cmd_0x10;
+
     uint8_t data[kMaxInputReportSizeBytes - 16];
+  };
+};
+
+
+#pragma pack(1)
+struct subcommand {
+  uint8_t report_counter;
+  uint8_t unk[0x09];
+  uint8_t subcommand;
+
+  union {
+      struct  {
+        uint16_t addr;
+        uint8_t len;
+      } spi_read;
   };
 };
 
