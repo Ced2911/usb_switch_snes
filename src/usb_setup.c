@@ -577,7 +577,7 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
     (void)dev;
 
     usbd_ep_setup(dev, ENDPOINT_HID_IN, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, NULL);
-    usbd_ep_setup(dev, ENDPOINT_HID_OUT, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, NULL);
+    usbd_ep_setup(dev, ENDPOINT_HID_OUT, USB_ENDPOINT_ATTR_INTERRUPT, 0x40, hid_data_rx_cb);
 
 #ifdef INCLUDE_CDC_INTERFACE
     usbd_ep_setup(usbd_dev, ENDPOINT_CDC_DATA_OUT, USB_ENDPOINT_ATTR_BULK, 0x40, cdcacm_data_rx_cb);

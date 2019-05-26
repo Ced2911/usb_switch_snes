@@ -58,7 +58,7 @@ int main(void)
     usb_setup();
     systick_iterrupt_init();
 
-    usart_send_str("start");
+    usart_send_str("========== start =========\r\n====================\r\n====================\r\n");
 
     while (1)
     {
@@ -69,11 +69,6 @@ int main(void)
 static uint8_t usb_in_buf[0x40];
 static uint8_t usb_out_buf[0x40];
 static uint8_t tick = 0;
-
-void hid_rx_cb(uint8_t *buf, uint16_t len)
-{
-    dump_hex(buf, len);
-}
 
 void fill_input_report(struct ControllerData *controller_data)
 {
@@ -86,7 +81,7 @@ void fill_input_report(struct ControllerData *controller_data)
         dir = -dir;
 
     // increment tick by 3
-    tick ++;
+    tick++;
 
     controller_data->timestamp = tick;
 
@@ -105,7 +100,7 @@ void fill_input_report(struct ControllerData *controller_data)
     controller_data->button_right_sl = x > 0;
     controller_data->button_right_sr = x > 0;
 
-    controller_data->battery_level = /*battery_level_charging | */battery_level_full;
+    controller_data->battery_level = /*battery_level_charging | */ battery_level_full;
     controller_data->connection_info = 0x1;
     controller_data->vibrator_input_report = 0x70;
 }
@@ -158,7 +153,7 @@ void output_mac_addr()
     memcpy(report->mac_data, mac_addr, sizeof(mac_addr));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 
-#else 
+#else
     // Verified
     // hard coded response !!!
     const uint8_t response_h[] = {0x81, 0x01, 0x00, kUsbDeviceTypeProController, 0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
@@ -202,7 +197,6 @@ void output_handshake()
 #endif
 }
 
-
 // baudrate
 void output_baudrate()
 {
@@ -235,9 +229,9 @@ void output_hid()
 #endif
 }
 
-void output_report_0x80()
+void output_report_0x80(uint8_t *buf)
 {
-    switch (usb_in_buf[1])
+    switch (buf[1])
     {
     case 0x01: // mac addr
         hw_led_toggle();
@@ -273,10 +267,11 @@ void output_report_0x10()
     /** nothing **/
 }
 
-static uint8_t joyStickMode = kReportIdInput30;
+static uint8_t joyStickMode = 0;
 
 void output_report_0x01_unknown_subcmd()
 {
+    usart_send_str("output_report_0x01_unknown_subcmd");
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -284,6 +279,41 @@ void output_report_0x01_unknown_subcmd()
     resp->subcommand_ack = 0x80;
     resp->subcommand = 0x00;
     resp->data[0] = 0x03;
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+void output_report_0x01_0x08_subcmd()
+{
+    usart_send_str("output_report_0x01_0x08_subcmd");
+    unsigned char rawData[64] = {
+        0x21,
+        0x06,
+        0x8E,
+        0x84,
+        0x00,
+        0x12,
+        0x01,
+        0x18,
+        0x80,
+        0x01,
+        0x18,
+        0x80,
+        0x80,
+        0x80,
+        0x08,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+    };
+    static int iii = 0;
+    rawData[0x01] = iii++;
+    memcpy(usb_out_buf, rawData, 0x40);
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
@@ -317,19 +347,13 @@ void output_report_0x01_get_device_info()
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 #else
     unsigned char rawData[64] = {
-        0x21, 0xBF, 0x91, 0x00, 0x80, 0x00, 0x4D, 0xE8, 0x72, 0xCD, 0x87, 0x7B,
-        0x00, 0x80, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00
-    };
+        0x21, 0x05, 0x8E, 0x84, 0x00, 0x12, 0x01, 0x18, 0x80, 0x01, 0x18, 0x80, 0x80,
+        0x82, 0x02, 0x03, 0x48, 0x01, 0x02, 0xA2, 0x55, 0x79, 0xAB, 0x78, 0xCC, 0x01, 0x01};
     static int iii = 0;
     rawData[0x01] = iii++;
     memcpy(usb_out_buf, rawData, 0x40);
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 #endif
-    
 }
 
 // Subcommand 0x03: Set input report mode
@@ -348,6 +372,7 @@ void output_report_0x01_set_report_mode()
     fill_input_report(&resp->controller_data);
 
     // joyStickMode = usb_in_buf[11];
+    joyStickMode = 0x30;
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
@@ -355,16 +380,29 @@ void output_report_0x01_set_report_mode()
 /* todo */
 void output_report_0x01_readspi()
 {
+    usart_send_str("output_report_0x01_readspi");
+#if 0
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
     fill_input_report(&resp->controller_data);
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#else
+    unsigned char rawData[64] = {
+        0x21,0x07,0x8E,0x84,0x00,0x12,0x01,0x18,0x80,0x01,0x18,0x80,0x80,
+0x90,0x10,0x00,0x60,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    };
+    static int iii = 0;
+    rawData[0x01] = iii++;
+    memcpy(usb_out_buf, rawData, 0x40);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#endif
 }
 
 /* todo */
 void output_report_0x01_writespi()
 {
+    usart_send_str("output_report_0x01_writespi");
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -375,6 +413,7 @@ void output_report_0x01_writespi()
 /* todo */
 void output_report_0x01_set_lights()
 {
+    usart_send_str("output_report_0x01_set_lights");
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -385,6 +424,7 @@ void output_report_0x01_set_lights()
 /* todo */
 void output_report_0x01_set_homelight()
 {
+    usart_send_str("output_report_0x01_set_homelight");
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -395,6 +435,7 @@ void output_report_0x01_set_homelight()
 /* todo */
 void output_report_0x01_set_immu()
 {
+    usart_send_str("output_report_0x01_set_immu");
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -405,6 +446,7 @@ void output_report_0x01_set_immu()
 /* todo */
 void output_report_0x01_set_immu_sensitivity()
 {
+    usart_send_str("output_report_0x01_set_immu_sensitivity");
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -415,6 +457,7 @@ void output_report_0x01_set_immu_sensitivity()
 /* todo */
 void output_report_0x01_set_vibration()
 {
+    usart_send_str("output_report_0x01_set_vibration");
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -423,9 +466,9 @@ void output_report_0x01_set_vibration()
 }
 
 // Sub command !
-void output_report_0x01()
+void output_report_0x01(uint8_t *buf)
 {
-    uint8_t subCmd = usb_in_buf[10];
+    uint8_t subCmd = buf[10];
 
     switch (subCmd)
     {
@@ -436,6 +479,10 @@ void output_report_0x01()
         // Set input report mode
     case 0x03:
         output_report_0x01_set_report_mode();
+        break;
+        // unknown ?
+    case 0x08:
+        output_report_0x01_0x08_subcmd();
         break;
     // Read Spi
     case 0x10:
@@ -473,8 +520,39 @@ void output_report_0x01()
     }
 }
 
+void hid_rx_cb(uint8_t *buf, uint16_t len)
+{
+    usart_send_str("Recv: ");
+    dump_hex(buf, len);
+
+    uint8_t cmd = buf[0];
+    switch (cmd)
+    {
+    case kReportIdOutput01:
+        output_report_0x01(buf);
+        break;
+    case kReportIdOutput10:
+        output_report_0x10(buf);
+        break;
+
+    case kUsbReportIdOutput80:
+        output_report_0x80(buf);
+        break;
+
+    case kReportIdInput30:
+    default:
+        input_report_0x30(buf);
+        break;
+    }
+
+    usart_send_str("Response: ");
+    dump_hex(usb_out_buf, 0x40);
+    usart_send_str(" ===== ");
+}
+
 void sys_tick_handler(void)
 {
+#if 0
     uint8_t cmd = joyStickMode;
     int len = usb_read_packet(ENDPOINT_HID_OUT, usb_in_buf, 0x40);
     if (len > 1)
@@ -516,4 +594,11 @@ void sys_tick_handler(void)
         usart_send_str("Response: ");
         dump_hex(usb_out_buf, 0x40);
     }
+#else
+    if (joyStickMode == 0x30)
+    {
+        input_report_0x30();
+    }
+
+#endif
 }
