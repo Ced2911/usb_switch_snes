@@ -1,0 +1,27 @@
+https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering/issues/7#issuecomment-328680285
+
+Please read the documentation here.
+The x02 at the end is the subcmd that requests device info.
+You need to reply to this with a 0x21 input report.
+
+To register your controller you need to forge the following subcmd replies when asked:
+
+Send 82 02 reply that contains a forged device info
+Send 90 10 00 60 00 00 10 spi reply that contains a forged serial number or just zeroes
+Send 80 08 reply (ack for receiving the set shipment command)
+Send 80 03 reply (ack that you changed input report format)
+Now you need to start sending forged 0x30 input reports every 15ms. I don't know what switch will do if you don't, so try both.
+
+Send 83 04 reply that contains the elapsed time after pressing a trigger. Better not be zero.
+Send 90 10 80 60 00 00 18 spi reply that contains forged Factory Sensor and Stick device parameters
+Send 90 10 98 60 00 00 12 spi reply that contains forged Factory Stick device parameters 2
+Send 90 10 10 80 00 00 18 spi reply that contains forged User Analog sticks calibration. Send zeroes.
+Send 90 10 3d 60 00 00 19 spi reply that contains forged Factory configuration & calibration 2.
+Send 90 10 20 60 00 00 18 spi reply that contains forged Factory configuration & calibration 1.
+Send 80 48 reply (ack that you enabled vibration)
+Send 80 40 reply (ack that you enabled 6-Axis sensor)
+Send 80 30 reply (ack that you set Player lights)
+Send 80 48 reply (ack that you enabled vibration again)
+Congrats, you just paired your device with Switch.
+
+Have in mind, that if switch lost a packet it will send the same command again. So you should send them according to the output report you received from Switch. Not sequentially.

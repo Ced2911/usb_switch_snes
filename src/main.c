@@ -158,7 +158,8 @@ void output_mac_addr()
     memcpy(report->mac_data, mac_addr, sizeof(mac_addr));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 
-#else
+#else 
+    // Verified
     // hard coded response !!!
     const uint8_t response_h[] = {0x81, 0x01, 0x00, kUsbDeviceTypeProController, 0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
     memcpy(usb_out_buf, response_h, sizeof(response_h));
@@ -184,6 +185,7 @@ void output_passthrough()
 }
 
 // passthrough
+// Verified
 void output_handshake()
 {
     usart_send_str("output_handshake");
@@ -193,7 +195,8 @@ void output_handshake()
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 #else
-    const uint8_t response_h[] = {0x81, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    const uint8_t response_h[] = {0x81, 0x02};
+    memset(usb_out_buf, 0, 0x40);
     memcpy(usb_out_buf, response_h, sizeof(response_h));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 #endif
@@ -288,6 +291,7 @@ void output_report_0x01_unknown_subcmd()
 void output_report_0x01_get_device_info()
 {
     usart_send_str("output_report_0x01_get_device_info");
+#if 0
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     usb_out_buf[0x00] = kUsbReportIdInput81;
 
@@ -311,6 +315,21 @@ void output_report_0x01_get_device_info()
     fill_input_report(&resp->controller_data);
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#else
+    unsigned char rawData[64] = {
+        0x21, 0xBF, 0x91, 0x00, 0x80, 0x00, 0x4D, 0xE8, 0x72, 0xCD, 0x87, 0x7B,
+        0x00, 0x80, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00
+    };
+    static int iii = 0;
+    rawData[0x01] = iii++;
+    memcpy(usb_out_buf, rawData, 0x40);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#endif
+    
 }
 
 // Subcommand 0x03: Set input report mode
