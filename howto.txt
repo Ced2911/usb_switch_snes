@@ -25,3 +25,10 @@ Send 80 48 reply (ack that you enabled vibration again)
 Congrats, you just paired your device with Switch.
 
 Have in mind, that if switch lost a packet it will send the same command again. So you should send them according to the output report you received from Switch. Not sequentially.
+
+
+
+===
+
+Docs ::
+https://github.com/timmeh87/switchnotes/blob/master/console_pairing_session
