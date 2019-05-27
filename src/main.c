@@ -2,10 +2,12 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifndef TEST
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#endif
 
 #include "compat.h"
 #include "joystick.h"
@@ -39,6 +41,7 @@ void dump_hex(const void *data, size_t size)
     usart_send_str(ascii_buffer);
 }
 
+#ifndef TEST
 void systick_iterrupt_init()
 {
 
@@ -48,7 +51,6 @@ void systick_iterrupt_init()
     systick_counter_enable();
 }
 
-#ifndef TEST
 int main(void)
 {
     hw_init();
@@ -272,7 +274,7 @@ static uint8_t joyStickMode = 0;
 
 void output_report_0x01_unknown_subcmd(uint8_t *buf)
 {
-   // usart_send_str("output_report_0x01_unknown_subcmd");
+    // usart_send_str("output_report_0x01_unknown_subcmd");
     char dbg[0x20] = {};
     sprintf(dbg, "output_report_0x01_unknown_subcmd 0x%02x", buf[10]);
     usart_send_str(dbg);
@@ -393,18 +395,17 @@ void output_report_0x01_readspi(uint8_t *buf)
     usb_out_buf[0x00] = kReportIdInput21;
     fill_input_report(&resp->controller_data);
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#elif 1    
+#elif 1
     struct SpiReadReport *resp = (struct SpiReadReport *)&usb_out_buf[0x01];
     uint16_t addr = *(uint16_t *)(&buf[kSubCommandDataOffset]);
     uint8_t len = buf[kSubCommandDataOffset + 4];
 
-    
     char dbg[0x20] = {};
     sprintf(dbg, "0x%04x 0x%02x", addr, len);
     usart_send_str(dbg);
 
     fill_input_report(&resp->controller_data);
-    
+
     usb_out_buf[0x00] = kReportIdInput21;
     resp->subcommand_ack = 0x90;
     resp->subcommand = 0x10;
@@ -425,7 +426,7 @@ void output_report_0x01_readspi(uint8_t *buf)
 
     memcpy(&usb_out_buf[0x00], &buf[kSubCommandDataOffset], 0x04);
 
-/*
+    /*
     resp->subcommand_ack = 0x90;
     resp->subcommand = len;
 
@@ -538,6 +539,30 @@ void output_report_0x01_set_vibration(uint8_t *buf)
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
+/* todo */
+void output_report_0x01_bt_pairing(uint8_t *buf)
+{
+    usart_send_str("output_report_0x01_bt_pairing");
+    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+
+    // acknowledge
+    resp->subcommand_ack = 0x80;
+    resp->subcommand = 0x01;
+    
+    //memset(resp->data, 0xff, 0x10);
+    const uint8_t p[] = {0x99,0x51,0x0a,0x1e,0x52,0x5c};
+    memcpy(resp->data, p, 6);
+
+    resp->data[0] = 0x01;
+
+    fill_input_report(&resp->controller_data);
+
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
 // Sub command !
 void output_report_0x01(uint8_t *buf)
 {
@@ -545,6 +570,9 @@ void output_report_0x01(uint8_t *buf)
 
     switch (subCmd)
     {
+    case 0x01:
+        output_report_0x01_bt_pairing(buf);
+        break;
         // get device info
     case 0x02:
         output_report_0x01_get_device_info(buf);
