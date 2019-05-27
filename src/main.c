@@ -544,23 +544,70 @@ void output_report_0x01_bt_pairing(uint8_t *buf)
 {
     usart_send_str("output_report_0x01_bt_pairing");
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    struct subcommand *data = (struct subcommand *)&buf[1];
 
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
 
+#if 0
     // acknowledge
     resp->subcommand_ack = 0x80;
     resp->subcommand = 0x01;
-    
+
     //memset(resp->data, 0xff, 0x10);
-    const uint8_t p[] = {0x99,0x51,0x0a,0x1e,0x52,0x5c};
+    const uint8_t p[] = {0x99, 0x51, 0x0a, 0x1e, 0x52, 0x5c};
     memcpy(resp->data, p, 6);
 
     resp->data[0] = 0x01;
 
+    uint8_t pairing_type = buf[11] /* data->pairing.type */;
+
+    char dbg[0x20] = {};
+    sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
+    usart_send_str(dbg);
+
     fill_input_report(&resp->controller_data);
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#else // crash switch !!
+    fill_input_report(&resp->controller_data);
+
+    uint8_t pairing_type = buf[11] /* data->pairing.type */;
+
+    char dbg[0x20] = {};
+    sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
+    usart_send_str(dbg);
+
+    switch (pairing_type)
+    {
+    case 0x01:
+        usart_send_str("request x01 ");
+        resp->subcommand_ack = 0x80;
+        resp->subcommand = 0x01;
+
+        const uint8_t p[] = {0x99, 0x51, 0x0a, 0x1e, 0x52, 0x5c};
+
+        memcpy(resp->data, p, 6);
+        //memcpy(resp->data, data->pairing.host_bt_addr, 6);
+        break;
+    case 0x02:
+        usart_send_str("request x02");
+        resp->subcommand_ack = 0x80;
+        resp->subcommand = 0x02;
+        break;
+    case 0x03:
+        usart_send_str("request x03");
+        resp->subcommand_ack = 0x80;
+        resp->subcommand = 0x03;
+        break;
+    default:
+        usart_send_str("request unknown");
+        resp->subcommand_ack = 0x80;
+        resp->subcommand = 0x03;
+        break;
+    }
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#endif
 }
 
 // Sub command !

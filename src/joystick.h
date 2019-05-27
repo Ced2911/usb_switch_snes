@@ -34,7 +34,8 @@ enum battery_level
   battery_level_full = 0x8,
 };
 
-enum joycon_connexion {
+enum joycon_connexion
+{
   joycon_connexion_bt = 0x03 << 1,
   joycon_connexion_usb = 0,
 };
@@ -243,18 +244,25 @@ struct Report81Response
   };
 };
 
-
 #pragma pack(1)
-struct subcommand {
+struct subcommand
+{
   uint8_t report_counter;
   uint8_t unk[0x09];
   uint8_t subcommand;
 
   union {
-      struct  {
-        uint16_t addr;
-        uint8_t len;
-      } spi_read;
+    struct
+    {
+      uint16_t addr;
+      uint8_t len;
+    } spi_read;
+
+    struct
+    {
+      uint8_t type;
+      uint8_t host_bt_addr[0x06];
+    } pairing;
   };
 };
 
