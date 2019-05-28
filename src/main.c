@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #ifndef TEST
@@ -14,7 +15,6 @@
 #include "hwinit.h"
 #include "usb_setup.h"
 #include "usart.h"
-
 
 static const uint8_t mac_addr[0x06] = {0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
 
@@ -407,6 +407,8 @@ void output_report_0x01_readspi(uint8_t *buf)
     sprintf(dbg, "0x%04x 0x%02x", addr, len);
     usart_send_str(dbg);
 
+    memset(usb_out_buf, 0x00, 0x40);
+
     fill_input_report(&resp->controller_data);
 
     usb_out_buf[0x00] = kReportIdInput21;
@@ -488,6 +490,17 @@ void output_report_0x01_writespi(uint8_t *buf)
 }
 
 /* todo */
+void output_report_0x01_erasespi(uint8_t *buf)
+{
+    usart_send_str("output_report_0x01_erasespi");
+    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+    fill_input_report(&resp->controller_data);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
+/* todo */
 void output_report_0x01_set_lights(uint8_t *buf)
 {
     usart_send_str("output_report_0x01_set_lights");
@@ -551,6 +564,7 @@ void output_report_0x01_bt_pairing(uint8_t *buf)
 
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
+    fill_input_report(&resp->controller_data);
 
 #if 0
     // acknowledge
@@ -569,11 +583,54 @@ void output_report_0x01_bt_pairing(uint8_t *buf)
     sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
     usart_send_str(dbg);
 
-    fill_input_report(&resp->controller_data);
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#elif 1
+    uint8_t pairing_type = buf[11] /* data->pairing.type */;
+    char dbg[0x20] = {};
+    sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
+    usart_send_str(dbg);
+
+    
+    unsigned char rawData[] = {
+        0x21, 0x01, 0x8E, 0x84, 0x00, 0x12, 0x01, 0x18, 0x80, 0x01, 0x18, 0x80, 0x80, 0x82, 0x02, 
+        0x03, 0x48, 0x01, 0x02, 0xA2, 0x55, 0x79, 0xAB, 0x78, 0xCC, 0x01, 0x01
+    };
+
+    rawData[13] = 0x81;
+    rawData[14] = 0x01;
+    unsigned char * ptr = &rawData[15];
+
+/* ex: pairing_type == 0x01
+01 0b 00 00 00 00 00 00 00 00 01 01 99 51 0a 1e 52 5c 00 04 3c 4e 69 6e 74 65 6e 64 6f 20 53 77 69 74 63 68 00 00 00 00 00 68 00 60 d0 b1 e2 13 00
+*/
+    if (pairing_type == 0x01) {
+        // Ok
+        //*ptr = 
+        *ptr++= 0x01;
+        *ptr++= 0x01;
+        memcpy(ptr, mac_addr, 6);
+
+        memcpy(usb_out_buf, rawData, sizeof(rawData));
+
+        usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+    }
+/* ex: pairing_type == 0x02
+01 0c 00 00 00 00 00 00 00 00 01 02 ba d8 e2 13 00 00 00 00 3b f8 cd 6a 00 00 00 04 ed ac e2 13 00 00 00 78 b9 d8 e2 13 00 00 00 50 ba d8 e2 13 00
+*/   
+    
+     else if(pairing_type == 0x02) {
+        rawData[13] = 0x80;
+        rawData[14] = 0x02;
+        *ptr++= 0x01;
+        memcpy(ptr, mac_addr, 6);
+        memcpy(usb_out_buf, rawData, sizeof(rawData));
+        usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+    } else {
+        usart_send_str("No packed sent");
+    }
+
 #else // crash switch !!
-    fill_input_report(&resp->controller_data);
 
     uint8_t pairing_type = buf[11] /* data->pairing.type */;
 
@@ -641,6 +698,9 @@ void output_report_0x01(uint8_t *buf)
         break;
     case 0x11:
         output_report_0x01_writespi(buf);
+        break;
+    case 0x12:
+        output_report_0x01_erasespi(buf);
         break;
     // Set Lights
     case 0x30:
