@@ -15,6 +15,9 @@
 #include "usb_setup.h"
 #include "usart.h"
 
+
+static const uint8_t mac_addr[0x06] = {0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
+
 static char ascii_buffer[0x100] = {};
 
 void dump_hex(const void *data, size_t size)
@@ -159,7 +162,7 @@ void output_mac_addr(uint8_t *usb_in)
 #else
     // Verified
     // hard coded response !!!
-    const uint8_t response_h[] = {0x81, 0x01, 0x00, kUsbDeviceTypeProController, 0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
+    const uint8_t response_h[] = {0x81, 0x01, 0x00, kUsbDeviceTypeProController, mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]};
     memcpy(usb_out_buf, response_h, sizeof(response_h));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 
