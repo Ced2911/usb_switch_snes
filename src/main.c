@@ -385,7 +385,7 @@ void output_report_0x01_trigger_elapsed(uint8_t *buf)
     usb_out_buf[0x00] = kReportIdInput21;
 
     // acknowledge
-    resp->subcommand_ack = 0x80;
+    resp->subcommand_ack = 0x83;
     resp->subcommand = 0x04;
 
     fill_input_report(&resp->controller_data);

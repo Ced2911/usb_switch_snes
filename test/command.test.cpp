@@ -69,7 +69,7 @@ SCENARIO("Test command")
 
                         // check response !
                         CHECK(usbTestBuf[0x00] == 0x21);
-                        CHECK(usbTestBuf[13] == 0x80);
+                        CHECK(usbTestBuf[13] == 0x83);
                         CHECK(usbTestBuf[14] == 0x04);
                 }
         }
