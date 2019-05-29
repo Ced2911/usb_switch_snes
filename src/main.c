@@ -15,6 +15,7 @@
 #include "hwinit.h"
 #include "usb_setup.h"
 #include "usart.h"
+#include "spi_func.h"
 
 static const uint8_t mac_addr[0x06] = {0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
 
@@ -146,7 +147,7 @@ void input_sub_cmd_0x10(uint8_t *usb_in)
 // 80 01
 void output_mac_addr(uint8_t *usb_in)
 {
-    usart_send_str("output_mac_addr");
+    usart_send_str(__func__ );
     // Verified
     // hard coded response !!!
     const uint8_t response_h[] = {
@@ -159,7 +160,7 @@ void output_mac_addr(uint8_t *usb_in)
 // passthrough
 void output_passthrough(uint8_t *usb_in)
 {
-    usart_send_str("passthrough");
+    usart_send_str(__func__ );
 #if 0
     usb_out_buf[0x00] = kUsbReportIdInput81;
     usb_out_buf[0x01] = usb_in_buf[1];
@@ -176,7 +177,7 @@ void output_passthrough(uint8_t *usb_in)
 // Verified
 void output_handshake(uint8_t *usb_in)
 {
-    usart_send_str("output_handshake");
+    usart_send_str(__func__ );
 #if 0
     usb_out_buf[0x00] = kUsbReportIdInput81;
     usb_out_buf[0x01] = usb_in_buf[1];
@@ -193,7 +194,7 @@ void output_handshake(uint8_t *usb_in)
 // baudrate
 void output_baudrate(uint8_t *usb_in)
 {
-    usart_send_str("output_baudrate");
+    usart_send_str(__func__ );
 #if 0
     usb_out_buf[0x00] = kUsbReportIdInput81;
     usb_out_buf[0x01] = usb_in_buf[1];
@@ -209,7 +210,7 @@ void output_baudrate(uint8_t *usb_in)
 // baudrate
 void output_hid(uint8_t *usb_in)
 {
-    usart_send_str("output_hid");
+    usart_send_str(__func__ );
 #if 0
     usb_out_buf[0x00] = kUsbReportIdInput81;
     usb_out_buf[0x01] = usb_in_buf[1];
@@ -281,7 +282,7 @@ void output_report_0x01_unknown_subcmd(uint8_t *buf)
 // Subcommand 0x08: Set shipment low power state
 void output_report_0x01_0x08_lowpower_state(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_0x08_lowpower_state");
+    usart_send_str(__func__ );
     unsigned char rawData[64] = {
         0x21,
         0x06,
@@ -317,7 +318,7 @@ void output_report_0x01_0x08_lowpower_state(uint8_t *buf)
 // Subcommand 0x02: Request device info
 void output_report_0x01_get_device_info(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_get_device_info");
+    usart_send_str(__func__ );
 #if 0
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     usb_out_buf[0x00] = kUsbReportIdInput81;
@@ -357,7 +358,7 @@ void output_report_0x01_get_device_info(uint8_t *buf)
 /* todo */
 void output_report_0x01_set_report_mode(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_set_report_mode");
+    usart_send_str(__func__ );
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -379,7 +380,7 @@ void output_report_0x01_set_report_mode(uint8_t *buf)
 /* todo */
 void output_report_0x01_trigger_elapsed(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_trigger_elapsed");
+    usart_send_str(__func__ );
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -395,186 +396,74 @@ void output_report_0x01_trigger_elapsed(uint8_t *buf)
 
 
 
-const uint8_t spi0x6000[256] = {
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, 0xA0, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x90, 0x00, 0x7F, 0xFE,
-	0xC9, 0x00, 0x00, 0x40, 0x00, 0x40, 0x00, 0x40, 0xFB, 0xFF, 0xD0, 0xFF,
-	0xC0, 0xFF, 0x3B, 0x34, 0x3B, 0x34, 0x3B, 0x34, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xA1, 0xA5, 0x67, 0x8A, 0x88, 0x7B, 0xD5, 0xE5, 0x59, 0x52, 0x18,
-	0x7D, 0x07, 0xF6, 0x5D, 0xB8, 0x85, 0x61, 0xFF, 0x32, 0x32, 0x32, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x50, 0xFD, 0x00, 0x00,
-	0xC6, 0x0F, 0x0F, 0x30, 0x61, 0x96, 0x30, 0xF3, 0xD4, 0x14, 0x54, 0x41,
-	0x15, 0x54, 0xC7, 0x79, 0x9C, 0x33, 0x36, 0x63, 0x0F, 0x30, 0x61, 0x96,
-	0x30, 0xF3, 0xD4, 0x14, 0x54, 0x41, 0x15, 0x54, 0xC7, 0x79, 0x9C, 0x33,
-	0x36, 0x63, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF
-};
-
-const uint8_t spi0x2000[144] = {
-	0x00, 0x22, 0x54, 0x5E, 0x5C, 0x52, 0x1E, 0x0A, 0x51, 0x99, 0x1A, 0xD3,
-	0x27, 0x14, 0x6F, 0x7E, 0x4F, 0xD7, 0x5D, 0x14, 0x6B, 0xEB, 0x17, 0x5D,
-	0x7C, 0xE7, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x68, 0x00, 0x95, 0x22, 0x70, 0x72, 0x9C, 0xB6, 0xD0, 0xF7, 0xF8, 0x10,
-	0x86, 0x78, 0x8D, 0xA2, 0xDB, 0x6D, 0x0F, 0x6F, 0x5C, 0xEE, 0x3F, 0xFD,
-	0x76, 0x05, 0x65, 0xA3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x08, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
-};
-
 
 
 
 /* todo */
 void output_report_0x01_readspi(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_readspi");
-#if 0
-    struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
-    // report ID
-    usb_out_buf[0x00] = kReportIdInput21;
-    fill_input_report(&resp->controller_data);
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#elif 1
+    usart_send_str(__func__ );
+
     struct SpiReadReport *resp = (struct SpiReadReport *)&usb_out_buf[0x01];
     uint16_t addr = *(uint16_t *)(&buf[kSubCommandDataOffset]);
     uint8_t len = buf[kSubCommandDataOffset + 4];
-    uint8_t * data = NULL;
-
-    switch (addr & 0xF000)
-    {
-    case 0x6000:
-        data = &spi0x6000[addr & 0xFF];
-        usart_send_str("Factory Configuration and Calibration");
-        break;
-    case 0x2000:
-        data = &spi0x2000[addr & 0x7F];
-        usart_send_str("Paring info");
-        break;
-
-    default:
-        usart_send_str("Unknown spi area");
-        break;
-    }
-
+    
+#if 0
     char dbg[0x40] = {};
     sprintf(dbg, "0x%04x 0x%02x", addr, len);
     usart_send_str(dbg);
-
+#endif
+    
     memset(usb_out_buf, 0x00, 0x40);
+    usb_out_buf[0x00] = kReportIdInput21;
 
     fill_input_report(&resp->controller_data);
-
-    usb_out_buf[0x00] = kReportIdInput21;
+    
     resp->subcommand_ack = 0x90;
     resp->subcommand = 0x10;
     resp->addr = addr;
 
-    // copy les datas de l'eeprom
-    if (data != NULL) {
-        memcpy(resp->spi_data, data, len);
-    }
+    spi_read(addr, len, resp->spi_data);
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#elif 0
-    struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
-    uint16_t addr = *(uint16_t *)(&buf[kSubCommandDataOffset]);
-    uint8_t len = buf[kSubCommandDataOffset + 4];
-
-    char dbg[0x40] = {};
-    sprintf(dbg, "0x%04x 0x%02x", addr, len);
-    usart_send_str(dbg);
-
-    usb_out_buf[0x00] = kReportIdInput21;
-
-    memcpy(&usb_out_buf[0x00], &buf[kSubCommandDataOffset], 0x04);
-
-    /*
-    resp->subcommand_ack = 0x90;
-    resp->subcommand = len;
-
-    resp->cmd_0x10.address = addr;
-    //resp->cmd_0x10.length = len;
-
-    memset(resp->cmd_0x10.spi_data, 0xff, 0x1D);
-    */
-
-    fill_input_report(&resp->controller_data);
-
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#else
-    unsigned char rawData[64] = {
-        0x21,
-        0x07,
-        0x8E,
-        0x84,
-        0x00,
-        0x12,
-        0x01,
-        0x18,
-        0x80,
-        0x01,
-        0x18,
-        0x80,
-        0x80,
-        0x90,
-        0x10,
-        0x00,
-        0x60,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-    };
-    static int iii = 0;
-    rawData[0x01] = iii++;
-    memcpy(usb_out_buf, rawData, 0x40);
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#endif
 }
 
 /* todo */
 void output_report_0x01_writespi(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_writespi");
+    usart_send_str(__func__ );
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    uint16_t addr = *(uint16_t *)(&buf[kSubCommandDataOffset]);
+    uint8_t len = buf[kSubCommandDataOffset + 4];
+
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
     fill_input_report(&resp->controller_data);
+
+    spi_write(addr, len, &buf[kSubCommandDataOffset + 5]);
+
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
 /* todo */
 void output_report_0x01_erasespi(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_erasespi");
+    usart_send_str(__func__ );
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
+    uint16_t addr = *(uint16_t *)(&buf[kSubCommandDataOffset]);
+    uint8_t len = buf[kSubCommandDataOffset + 4];
+
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
     fill_input_report(&resp->controller_data);
+    spi_erase(addr, len);
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
 /* todo */
 void output_report_0x01_set_lights(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_set_lights");
+    usart_send_str(__func__ );
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -585,7 +474,7 @@ void output_report_0x01_set_lights(uint8_t *buf)
 /* todo */
 void output_report_0x01_set_homelight(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_set_homelight");
+    usart_send_str(__func__ );
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -596,7 +485,7 @@ void output_report_0x01_set_homelight(uint8_t *buf)
 /* todo */
 void output_report_0x01_set_immu(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_set_immu");
+    usart_send_str(__func__ );
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -607,7 +496,7 @@ void output_report_0x01_set_immu(uint8_t *buf)
 /* todo */
 void output_report_0x01_set_immu_sensitivity(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_set_immu_sensitivity");
+    usart_send_str(__func__ );
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -618,7 +507,7 @@ void output_report_0x01_set_immu_sensitivity(uint8_t *buf)
 /* todo */
 void output_report_0x01_set_vibration(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_set_vibration");
+    usart_send_str(__func__ );
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -629,7 +518,7 @@ void output_report_0x01_set_vibration(uint8_t *buf)
 /* todo */
 void output_report_0x01_bt_pairing(uint8_t *buf)
 {
-    usart_send_str("output_report_0x01_bt_pairing");
+    usart_send_str(__func__ );
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     struct subcommand *data = (struct subcommand *)&buf[1];
 
