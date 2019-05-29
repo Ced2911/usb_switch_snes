@@ -72,6 +72,21 @@ SCENARIO("Test command")
                         CHECK(usbTestBuf[13] == 0x83);
                         CHECK(usbTestBuf[14] == 0x04);
                 }
+
+
+                WHEN("check output_report_0x01_0x08_lowpower_state ")
+                {
+                    uint8_t rq[] = {0x01, 0x02, 0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40,
+                                    0x08, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 0x00, 0x00};
+
+                    hid_rx_cb(rq, sizeof(rq));
+
+                    // check response !
+                    CHECK(usbTestBuf[0x00] == 0x21);
+                    CHECK(usbTestBuf[13] == 0x80);
+                    CHECK(usbTestBuf[14] == 0x08);
+                    CHECK(usbTestBuf[15] == 0x00);
+                }
         }
 }
 //#endif

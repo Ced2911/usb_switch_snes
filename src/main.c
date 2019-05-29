@@ -125,6 +125,7 @@ void input_report_0x30(uint8_t *usb_in)
 // Subcommand 0x10: SPI flash read
 void input_sub_cmd_0x10(uint8_t *usb_in)
 {
+    usart_send_str(__func__ );
     struct SpiReadReport resp = {};
     struct brcm_cmd_01 *spi_cmd = (struct brcm_cmd_01 *)&usb_in[kSubCmdOffset];
 
@@ -311,7 +312,7 @@ void output_report_0x01_0x08_lowpower_state(uint8_t *buf)
     };
     static int iii = 0;
     rawData[0x01] = iii++;
-    memcpy(usb_out_buf, rawData, 0x40);
+    memcpy(usb_out_buf, rawData, sizeof(rawData));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
