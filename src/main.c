@@ -265,7 +265,7 @@ static uint8_t joyStickMode = 0;
 void output_report_0x01_unknown_subcmd(uint8_t *buf)
 {
     // usart_send_str("output_report_0x01_unknown_subcmd");
-    char dbg[0x20] = {};
+    char dbg[0x40] = {};
     sprintf(dbg, "output_report_0x01_unknown_subcmd 0x%02x", buf[10]);
     usart_send_str(dbg);
 
@@ -378,7 +378,7 @@ void output_report_0x01_set_report_mode(uint8_t *buf)
 
 
 
-const unsigned char spi0x6000[256] = {
+const uint8_t spi0x6000[256] = {
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, 0xA0, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x90, 0x00, 0x7F, 0xFE,
@@ -403,7 +403,7 @@ const unsigned char spi0x6000[256] = {
 	0xFF, 0xFF, 0xFF, 0xFF
 };
 
-const unsigned char spi0x2000[144] = {
+const uint8_t spi0x2000[144] = {
 	0x00, 0x22, 0x54, 0x5E, 0x5C, 0x52, 0x1E, 0x0A, 0x51, 0x99, 0x1A, 0xD3,
 	0x27, 0x14, 0x6F, 0x7E, 0x4F, 0xD7, 0x5D, 0x14, 0x6B, 0xEB, 0x17, 0x5D,
 	0x7C, 0xE7, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -453,7 +453,7 @@ void output_report_0x01_readspi(uint8_t *buf)
         break;
     }
 
-    char dbg[0x20] = {};
+    char dbg[0x40] = {};
     sprintf(dbg, "0x%04x 0x%02x", addr, len);
     usart_send_str(dbg);
 
@@ -477,7 +477,7 @@ void output_report_0x01_readspi(uint8_t *buf)
     uint16_t addr = *(uint16_t *)(&buf[kSubCommandDataOffset]);
     uint8_t len = buf[kSubCommandDataOffset + 4];
 
-    char dbg[0x20] = {};
+    char dbg[0x40] = {};
     sprintf(dbg, "0x%04x 0x%02x", addr, len);
     usart_send_str(dbg);
 
@@ -633,7 +633,7 @@ void output_report_0x01_bt_pairing(uint8_t *buf)
 
     uint8_t pairing_type = buf[11] /* data->pairing.type */;
 
-    char dbg[0x20] = {};
+    char dbg[0x40] = {};
     sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
     usart_send_str(dbg);
 
@@ -641,7 +641,7 @@ void output_report_0x01_bt_pairing(uint8_t *buf)
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 #elif 1
     uint8_t pairing_type = buf[11] /* data->pairing.type */;
-    char dbg[0x20] = {};
+    char dbg[0x40] = {};
     sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
     usart_send_str(dbg);
 
@@ -702,7 +702,7 @@ void output_report_0x01_bt_pairing(uint8_t *buf)
 
     uint8_t pairing_type = buf[11] /* data->pairing.type */;
 
-    char dbg[0x20] = {};
+    char dbg[0x40] = {};
     sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
     usart_send_str(dbg);
 
