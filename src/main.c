@@ -686,9 +686,26 @@ void output_report_0x01_bt_pairing(uint8_t *buf)
             ltkHash[i] = ltkHash[i] ^ 0xAA;
         }
 
-        rawData[13] = 0x80;
-        rawData[14] = 0x02;
-        *ptr++ = 0x01;
+        rawData[13] = 0x81;
+        rawData[14] = 0x01;
+        *ptr++ = 0x02;
+        memcpy(ptr, ltkHash, sizeof(ltkHash));
+        memcpy(usb_out_buf, rawData, sizeof(rawData));
+        usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+    }
+    else if (pairing_type == 0x03) {
+        uint8_t ltkHash[] = {
+            0x1A, 0xD3, 0x27, 0x14, 0x6F, 0x7E, 0x4F, 0xD7, 0x5D, 0x14, 0x6B, 0xEB,
+            0x17, 0x5D, 0x7C, 0xE7};
+        // xor it
+        for (int i = 0; i < sizeof(ltkHash); i++)
+        {
+            ltkHash[i] = ltkHash[i] ^ 0xAA;
+        }
+
+        rawData[13] = 0x81;
+        rawData[14] = 0x01;
+        *ptr++ = 0x03;
         memcpy(ptr, ltkHash, sizeof(ltkHash));
         memcpy(usb_out_buf, rawData, sizeof(rawData));
         usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
