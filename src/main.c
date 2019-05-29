@@ -23,7 +23,6 @@ static char ascii_buffer[0x100] = {};
 
 void dump_hex(const void *data, size_t size)
 {
-
     char *ptr = ascii_buffer;
     size_t i;
     size = min(size, 0x100);
@@ -51,7 +50,7 @@ void systick_iterrupt_init()
 
     systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
     /* SysTick interrupt every N clock pulses: set reload to N-1 */
-    systick_set_reload(99999);
+    systick_set_reload(((9000000/9000) * 15) - 1); // 15 ms ?
     systick_counter_enable();
 }
 
@@ -74,7 +73,9 @@ int main(void)
 }
 #endif
 
-static uint8_t usb_out_buf[0x40];
+//#define usart_send_str(...) 
+
+//static uint8_t usb_out_buf[0x40];
 static uint8_t tick = 0;
 
 void fill_input_report(struct ControllerData *controller_data)
@@ -88,7 +89,7 @@ void fill_input_report(struct ControllerData *controller_data)
         dir = -dir;
 
     // increment tick by 3
-    tick++;
+    tick+=3;
 
     controller_data->timestamp = tick;
 
@@ -100,20 +101,21 @@ void fill_input_report(struct ControllerData *controller_data)
 
     controller_data->button_zl = x > 0;
     controller_data->button_zr = x > 0;
-
+/*
     controller_data->button_left_sl = x > 0;
     controller_data->button_left_sr = x > 0;
 
     controller_data->button_right_sl = x > 0;
     controller_data->button_right_sr = x > 0;
+    */
 
     controller_data->battery_level = /*battery_level_charging | */ battery_level_full;
     controller_data->connection_info = 0x1;
-    controller_data->vibrator_input_report = 0x70;
+    controller_data->vibrator_input_report = 0xB0;
 }
 
 // Standard full mode - input reports with IMU data instead of subcommand replies. Pushes current state @60Hz, or @120Hz if Pro Controller.
-void input_report_0x30(uint8_t *usb_in)
+void input_report_0x30(uint8_t *usb_in, uint8_t * usb_out_buf)
 {
     // report ID
     usb_out_buf[0x00] = kReportIdInput30;
@@ -123,9 +125,9 @@ void input_report_0x30(uint8_t *usb_in)
 }
 
 // Subcommand 0x10: SPI flash read
-void input_sub_cmd_0x10(uint8_t *usb_in)
+void input_sub_cmd_0x10(uint8_t *usb_in, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct SpiReadReport resp = {};
     struct brcm_cmd_01 *spi_cmd = (struct brcm_cmd_01 *)&usb_in[kSubCmdOffset];
 
@@ -146,9 +148,9 @@ void input_sub_cmd_0x10(uint8_t *usb_in)
 }
 
 // 80 01
-void output_mac_addr(uint8_t *usb_in)
+void output_mac_addr(uint8_t *usb_in, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     // Verified
     // hard coded response !!!
     const uint8_t response_h[] = {
@@ -159,9 +161,9 @@ void output_mac_addr(uint8_t *usb_in)
 }
 
 // passthrough
-void output_passthrough(uint8_t *usb_in)
+void output_passthrough(uint8_t *usb_in, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
 #if 0
     usb_out_buf[0x00] = kUsbReportIdInput81;
     usb_out_buf[0x01] = usb_in_buf[1];
@@ -176,9 +178,9 @@ void output_passthrough(uint8_t *usb_in)
 
 // passthrough
 // Verified
-void output_handshake(uint8_t *usb_in)
+void output_handshake(uint8_t *usb_in, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
 #if 0
     usb_out_buf[0x00] = kUsbReportIdInput81;
     usb_out_buf[0x01] = usb_in_buf[1];
@@ -193,9 +195,9 @@ void output_handshake(uint8_t *usb_in)
 }
 
 // baudrate
-void output_baudrate(uint8_t *usb_in)
+void output_baudrate(uint8_t *usb_in, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
 #if 0
     usb_out_buf[0x00] = kUsbReportIdInput81;
     usb_out_buf[0x01] = usb_in_buf[1];
@@ -209,9 +211,9 @@ void output_baudrate(uint8_t *usb_in)
 }
 
 // baudrate
-void output_hid(uint8_t *usb_in)
+void output_hid(uint8_t *usb_in, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
 #if 0
     usb_out_buf[0x00] = kUsbReportIdInput81;
     usb_out_buf[0x01] = usb_in_buf[1];
@@ -224,47 +226,42 @@ void output_hid(uint8_t *usb_in)
 #endif
 }
 
-void output_report_0x80(uint8_t *buf)
+void output_report_0x80(uint8_t *buf, uint8_t * usb_out_buf)
 {
     switch (buf[1])
     {
     case 0x01: // mac addr
         hw_led_toggle();
-        output_mac_addr(buf);
+        output_mac_addr(buf, usb_out_buf);
         break;
         //handshake//baudrate
     case 0x02:
-        output_handshake(buf);
+        output_handshake(buf, usb_out_buf);
         break;
     case 0x03:
-        output_baudrate(buf);
+        output_baudrate(buf, usb_out_buf);
         break;
     // usb timeout
     case 0x04:
-        output_hid(buf);
+        output_hid(buf, usb_out_buf);
         break;
     case 0x05:
-        output_passthrough(buf);
+        output_passthrough(buf, usb_out_buf);
         break;
         // custom ?
     case 0x91:
     case 0x92:
-        output_passthrough(buf);
+        output_passthrough(buf, usb_out_buf);
         break;
     default:
-        output_passthrough(buf);
+        output_passthrough(buf, usb_out_buf);
         break;
     }
 }
 
-void output_report_0x10(uint8_t *buf)
-{
-    /** nothing **/
-}
-
 static uint8_t joyStickMode = 0;
 
-void output_report_0x01_unknown_subcmd(uint8_t *buf)
+void output_report_0x01_unknown_subcmd(uint8_t *buf, uint8_t * usb_out_buf)
 {
     // usart_send_str("output_report_0x01_unknown_subcmd");
     char dbg[0x40] = {};
@@ -281,9 +278,9 @@ void output_report_0x01_unknown_subcmd(uint8_t *buf)
 }
 
 // Subcommand 0x08: Set shipment low power state
-void output_report_0x01_0x08_lowpower_state(uint8_t *buf)
+void output_report_0x01_0x08_lowpower_state(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     unsigned char rawData[64] = {
         0x21,
         0x06,
@@ -317,9 +314,9 @@ void output_report_0x01_0x08_lowpower_state(uint8_t *buf)
 }
 
 // Subcommand 0x02: Request device info
-void output_report_0x01_get_device_info(uint8_t *buf)
+void output_report_0x01_get_device_info(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
 #if 0
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     usb_out_buf[0x00] = kUsbReportIdInput81;
@@ -357,9 +354,9 @@ void output_report_0x01_get_device_info(uint8_t *buf)
 
 // Subcommand 0x03: Set input report mode
 /* todo */
-void output_report_0x01_set_report_mode(uint8_t *buf)
+void output_report_0x01_set_report_mode(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -370,18 +367,16 @@ void output_report_0x01_set_report_mode(uint8_t *buf)
 
     fill_input_report(&resp->controller_data);
 
-    // joyStickMode = usb_in_buf[11];
-    joyStickMode = 0x30;
+    joyStickMode = buf[11];
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
-
 // Subcommand 0x04: Trigger buttons elapsed time
 /* todo */
-void output_report_0x01_trigger_elapsed(uint8_t *buf)
+void output_report_0x01_trigger_elapsed(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -395,31 +390,26 @@ void output_report_0x01_trigger_elapsed(uint8_t *buf)
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
-
-
-
-
-
 /* todo */
-void output_report_0x01_readspi(uint8_t *buf)
+void output_report_0x01_readspi(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
 
     struct SpiReadReport *resp = (struct SpiReadReport *)&usb_out_buf[0x01];
     uint16_t addr = *(uint16_t *)(&buf[kSubCommandDataOffset]);
     uint8_t len = buf[kSubCommandDataOffset + 4];
-    
-#if 0
+
+#if 1
     char dbg[0x40] = {};
     sprintf(dbg, "0x%04x 0x%02x", addr, len);
     usart_send_str(dbg);
 #endif
-    
+
     memset(usb_out_buf, 0x00, 0x40);
     usb_out_buf[0x00] = kReportIdInput21;
 
     fill_input_report(&resp->controller_data);
-    
+
     resp->subcommand_ack = 0x90;
     resp->subcommand = 0x10;
     resp->addr = addr;
@@ -430,9 +420,9 @@ void output_report_0x01_readspi(uint8_t *buf)
 }
 
 /* todo */
-void output_report_0x01_writespi(uint8_t *buf)
+void output_report_0x01_writespi(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     uint16_t addr = *(uint16_t *)(&buf[kSubCommandDataOffset]);
     uint8_t len = buf[kSubCommandDataOffset + 4];
@@ -447,9 +437,9 @@ void output_report_0x01_writespi(uint8_t *buf)
 }
 
 /* todo */
-void output_report_0x01_erasespi(uint8_t *buf)
+void output_report_0x01_erasespi(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     uint16_t addr = *(uint16_t *)(&buf[kSubCommandDataOffset]);
     uint8_t len = buf[kSubCommandDataOffset + 4];
@@ -462,9 +452,9 @@ void output_report_0x01_erasespi(uint8_t *buf)
 }
 
 /* todo */
-void output_report_0x01_set_lights(uint8_t *buf)
+void output_report_0x01_set_lights(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -473,9 +463,9 @@ void output_report_0x01_set_lights(uint8_t *buf)
 }
 
 /* todo */
-void output_report_0x01_set_homelight(uint8_t *buf)
+void output_report_0x01_set_homelight(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -484,9 +474,9 @@ void output_report_0x01_set_homelight(uint8_t *buf)
 }
 
 /* todo */
-void output_report_0x01_set_immu(uint8_t *buf)
+void output_report_0x01_set_immu(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -495,9 +485,9 @@ void output_report_0x01_set_immu(uint8_t *buf)
 }
 
 /* todo */
-void output_report_0x01_set_immu_sensitivity(uint8_t *buf)
+void output_report_0x01_set_immu_sensitivity(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -506,9 +496,9 @@ void output_report_0x01_set_immu_sensitivity(uint8_t *buf)
 }
 
 /* todo */
-void output_report_0x01_set_vibration(uint8_t *buf)
+void output_report_0x01_set_vibration(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -517,9 +507,9 @@ void output_report_0x01_set_vibration(uint8_t *buf)
 }
 
 /* todo */
-void output_report_0x01_bt_pairing(uint8_t *buf)
+void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t * usb_out_buf)
 {
-    usart_send_str(__func__ );
+    usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
     struct subcommand *data = (struct subcommand *)&buf[1];
 
@@ -527,26 +517,6 @@ void output_report_0x01_bt_pairing(uint8_t *buf)
     usb_out_buf[0x00] = kReportIdInput21;
     fill_input_report(&resp->controller_data);
 
-#if 0
-    // acknowledge
-    resp->subcommand_ack = 0x80;
-    resp->subcommand = 0x01;
-
-    //memset(resp->data, 0xff, 0x10);
-    const uint8_t p[] = {0x99, 0x51, 0x0a, 0x1e, 0x52, 0x5c};
-    memcpy(resp->data, p, 6);
-
-    resp->data[0] = 0x01;
-
-    uint8_t pairing_type = buf[11] /* data->pairing.type */;
-
-    char dbg[0x40] = {};
-    sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
-    usart_send_str(dbg);
-
-
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#elif 1
     uint8_t pairing_type = buf[11] /* data->pairing.type */;
     char dbg[0x40] = {};
     sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
@@ -600,7 +570,8 @@ void output_report_0x01_bt_pairing(uint8_t *buf)
         memcpy(usb_out_buf, rawData, sizeof(rawData));
         usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
     }
-    else if (pairing_type == 0x03) {
+    else if (pairing_type == 0x03)
+    {
         uint8_t ltkHash[] = {
             0x1A, 0xD3, 0x27, 0x14, 0x6F, 0x7E, 0x4F, 0xD7, 0x5D, 0x14, 0x6B, 0xEB,
             0x17, 0x5D, 0x7C, 0xE7};
@@ -621,111 +592,81 @@ void output_report_0x01_bt_pairing(uint8_t *buf)
     {
         usart_send_str("No packed sent");
     }
+}
 
-#else // crash switch !!
-
-    uint8_t pairing_type = buf[11] /* data->pairing.type */;
-
-    char dbg[0x40] = {};
-    sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
-    usart_send_str(dbg);
-
-    switch (pairing_type)
-    {
-    case 0x01:
-        usart_send_str("request x01 ");
-        resp->subcommand_ack = 0x80;
-        resp->subcommand = 0x01;
-
-        const uint8_t p[] = {0x99, 0x51, 0x0a, 0x1e, 0x52, 0x5c};
-
-        memcpy(resp->data, p, 6);
-        //memcpy(resp->data, data->pairing.host_bt_addr, 6);
-        break;
-    case 0x02:
-        usart_send_str("request x02");
-        resp->subcommand_ack = 0x80;
-        resp->subcommand = 0x02;
-        break;
-    case 0x03:
-        usart_send_str("request x03");
-        resp->subcommand_ack = 0x80;
-        resp->subcommand = 0x03;
-        break;
-    default:
-        usart_send_str("request unknown");
-        resp->subcommand_ack = 0x80;
-        resp->subcommand = 0x03;
-        break;
-    }
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#endif
+void output_report_0x10(uint8_t *buf, uint8_t * usb_out_buf)
+{
+    /** nothing **/
+    // Joy-con does not reply when Output Report is 0x10
+    usart_send_str(__func__);
 }
 
 // Sub command !
-void output_report_0x01(uint8_t *buf)
+void output_report_0x01(uint8_t *buf, uint8_t * usb_out_buf)
 {
     uint8_t subCmd = buf[10];
 
     switch (subCmd)
     {
     case 0x01:
-        output_report_0x01_bt_pairing(buf);
+        output_report_0x01_bt_pairing(buf, usb_out_buf);
         break;
         // get device info
     case 0x02:
-        output_report_0x01_get_device_info(buf);
+        output_report_0x01_get_device_info(buf, usb_out_buf);
         break;
         // Set input report mode
     case 0x03:
-        output_report_0x01_set_report_mode(buf);
+        output_report_0x01_set_report_mode(buf, usb_out_buf);
         break;
         // unknown ?
     case 0x04:
-        output_report_0x01_trigger_elapsed(buf);
+        output_report_0x01_trigger_elapsed(buf, usb_out_buf);
         break;
         // unknown ?
     case 0x08:
-        output_report_0x01_0x08_lowpower_state(buf);
+        output_report_0x01_0x08_lowpower_state(buf, usb_out_buf);
         break;
     // Read Spi
     case 0x10:
-        output_report_0x01_readspi(buf);
+        output_report_0x01_readspi(buf, usb_out_buf);
         break;
     case 0x11:
-        output_report_0x01_writespi(buf);
+        output_report_0x01_writespi(buf, usb_out_buf);
         break;
     case 0x12:
-        output_report_0x01_erasespi(buf);
+        output_report_0x01_erasespi(buf, usb_out_buf);
         break;
     // Set Lights
     case 0x30:
-        output_report_0x01_set_lights(buf);
+        output_report_0x01_set_lights(buf, usb_out_buf);
         break;
     // Set Home Light
     case 0x38:
-        output_report_0x01_set_homelight(buf);
+        output_report_0x01_set_homelight(buf, usb_out_buf);
         break;
     // Set Immu
     case 0x40:
-        output_report_0x01_set_immu(buf);
+        output_report_0x01_set_immu(buf, usb_out_buf);
         break;
     // Set Immu Sensitivity
     case 0x41:
-        output_report_0x01_set_immu_sensitivity(buf);
+        output_report_0x01_set_immu_sensitivity(buf, usb_out_buf);
         break;
     // Set Vibration
     case 0x48:
-        output_report_0x01_set_vibration(buf);
+        output_report_0x01_set_vibration(buf, usb_out_buf);
         break;
 
     case 0x00:
     case 0x33:
     default:
-        output_report_0x01_unknown_subcmd(buf);
+        output_report_0x01_unknown_subcmd(buf, usb_out_buf);
         break;
     }
 }
+
+volatile bool working = false;
 
 void hid_rx_cb(uint8_t *buf, uint16_t len)
 {
@@ -733,32 +674,38 @@ void hid_rx_cb(uint8_t *buf, uint16_t len)
     dump_hex(buf, len);
 
     uint8_t cmd = buf[0];
+    uint8_t usb_out_buf[0x40];
+
     switch (cmd)
     {
     case kReportIdOutput01:
-        output_report_0x01(buf);
+        output_report_0x01(buf, usb_out_buf);
         break;
     case kReportIdOutput10:
-        output_report_0x10(buf);
+        output_report_0x10(buf, usb_out_buf);
         break;
 
     case kUsbReportIdOutput80:
-        output_report_0x80(buf);
+        output_report_0x80(buf, usb_out_buf);
         break;
 
     case kReportIdInput30:
     default:
-        input_report_0x30(buf);
+        input_report_0x30(buf, usb_out_buf);
         break;
     }
 
-    usart_send_str("Response: ");
-    dump_hex(usb_out_buf, 0x40);
+    if (kReportIdOutput10 != cmd)
+    {
+        usart_send_str("Response: ");
+        dump_hex(usb_out_buf, 0x40);
+    }
     usart_send_str(" ===== ");
 }
 
 void sys_tick_handler(void)
-{
+{    
+    uint8_t usb_out_buf[0x40];
 #if 0
     uint8_t cmd = joyStickMode;
     int len = usb_read_packet(ENDPOINT_HID_OUT, usb_in_buf, 0x40);
@@ -804,8 +751,7 @@ void sys_tick_handler(void)
 #else
     if (joyStickMode == 0x30)
     {
-        input_report_0x30(NULL);
+        input_report_0x30(NULL, usb_out_buf);
     }
-
 #endif
 }

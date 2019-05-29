@@ -43,7 +43,6 @@ static const uint8_t spi0x6000[256] = {
 
 void spi_read(uint16_t addr, uint8_t len, uint8_t *buffer)
 {
-
     uint8_t *data = NULL;
     switch (addr & 0xF000)
     {
