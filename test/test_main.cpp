@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
+#include <stdio.h>
 
 int main(int argc, char** argv) {
     doctest::Context context;
@@ -16,5 +17,7 @@ uint16_t usb_write_packet(uint8_t ep, void *buf, uint16_t len)
 }
 
 
-extern "C" void usart_send_str(char *p) {}
+extern "C" void usart_send_str(char *p) {
+    printf("%s\n", p);
+}
 extern "C" void hw_led_toggle() {}
