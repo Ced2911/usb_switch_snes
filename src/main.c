@@ -274,8 +274,7 @@ void output_report_0x01_unknown_subcmd(uint8_t *buf)
     usb_out_buf[0x00] = kReportIdInput21;
     fill_input_report(&resp->controller_data);
     resp->subcommand_ack = 0x80;
-    resp->subcommand = 0x00;
-    resp->data[0] = 0x03;
+    resp->subcommand = buf[10];
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
@@ -375,6 +374,24 @@ void output_report_0x01_set_report_mode(uint8_t *buf)
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
+
+// Subcommand 0x04: Trigger buttons elapsed time
+/* todo */
+void output_report_0x01_trigger_elapsed(uint8_t *buf)
+{
+    usart_send_str("output_report_0x01_trigger_elapsed");
+    struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
+    // report ID
+    usb_out_buf[0x00] = kReportIdInput21;
+
+    // acknowledge
+    resp->subcommand_ack = 0x80;
+    resp->subcommand = 0x04;
+
+    fill_input_report(&resp->controller_data);
+
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
 
 
 
@@ -772,6 +789,10 @@ void output_report_0x01(uint8_t *buf)
         // Set input report mode
     case 0x03:
         output_report_0x01_set_report_mode(buf);
+        break;
+        // unknown ?
+    case 0x04:
+        output_report_0x01_trigger_elapsed(buf);
         break;
         // unknown ?
     case 0x08:
