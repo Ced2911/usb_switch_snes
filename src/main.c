@@ -147,26 +147,14 @@ void input_sub_cmd_0x10(uint8_t *usb_in)
 void output_mac_addr(uint8_t *usb_in)
 {
     usart_send_str("output_mac_addr");
-#if 0
-    const uint8_t mac_addr[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55};
-
-    struct MacAddressReport *report = &usb_out_buf[0x01];
-
-    usb_out_buf[0x00] = kUsbReportIdInput81;
-
-    report->subtype = 0x01;
-    report->device_type = kUsbDeviceTypeChargingGripJoyConL;
-    memcpy(report->mac_data, mac_addr, sizeof(mac_addr));
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-
-#else
     // Verified
     // hard coded response !!!
-    const uint8_t response_h[] = {0x81, 0x01, 0x00, kUsbDeviceTypeProController, mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]};
+    const uint8_t response_h[] = {
+        kUsbReportIdInput81, 0x01, 0x00, kUsbDeviceTypeProController, 
+        mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]
+    };
     memcpy(usb_out_buf, response_h, sizeof(response_h));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-
-#endif
 }
 
 // passthrough
