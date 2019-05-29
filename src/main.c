@@ -45,12 +45,14 @@ void dump_hex(const void *data, size_t size)
 }
 
 #ifndef TEST
+void handle_packet();
+
 void systick_iterrupt_init()
 {
 
     systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
     /* SysTick interrupt every N clock pulses: set reload to N-1 */
-    systick_set_reload(((9000000/9000) * 15) - 1); // 15 ms ?
+    systick_set_reload(((9000000 / 9000) * 15) - 1); // 15 ms ?
     systick_counter_enable();
 }
 
@@ -69,11 +71,12 @@ int main(void)
     while (1)
     {
         usb_poll();
+        handle_packet();
     }
 }
 #endif
 
-//#define usart_send_str(...) 
+//#define usart_send_str(...)
 
 //static uint8_t usb_out_buf[0x40];
 static uint8_t tick = 0;
@@ -89,7 +92,7 @@ void fill_input_report(struct ControllerData *controller_data)
         dir = -dir;
 
     // increment tick by 3
-    tick+=3;
+    tick += 3;
 
     controller_data->timestamp = tick;
 
@@ -101,7 +104,7 @@ void fill_input_report(struct ControllerData *controller_data)
 
     controller_data->button_zl = x > 0;
     controller_data->button_zr = x > 0;
-/*
+    /*
     controller_data->button_left_sl = x > 0;
     controller_data->button_left_sr = x > 0;
 
@@ -115,8 +118,9 @@ void fill_input_report(struct ControllerData *controller_data)
 }
 
 // Standard full mode - input reports with IMU data instead of subcommand replies. Pushes current state @60Hz, or @120Hz if Pro Controller.
-void input_report_0x30(uint8_t *usb_in, uint8_t * usb_out_buf)
+void input_report_0x30(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
+    //usart_send_str(__func__);
     // report ID
     usb_out_buf[0x00] = kReportIdInput30;
 
@@ -125,7 +129,7 @@ void input_report_0x30(uint8_t *usb_in, uint8_t * usb_out_buf)
 }
 
 // Subcommand 0x10: SPI flash read
-void input_sub_cmd_0x10(uint8_t *usb_in, uint8_t * usb_out_buf)
+void input_sub_cmd_0x10(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct SpiReadReport resp = {};
@@ -148,7 +152,7 @@ void input_sub_cmd_0x10(uint8_t *usb_in, uint8_t * usb_out_buf)
 }
 
 // 80 01
-void output_mac_addr(uint8_t *usb_in, uint8_t * usb_out_buf)
+void output_mac_addr(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     // Verified
@@ -161,7 +165,7 @@ void output_mac_addr(uint8_t *usb_in, uint8_t * usb_out_buf)
 }
 
 // passthrough
-void output_passthrough(uint8_t *usb_in, uint8_t * usb_out_buf)
+void output_passthrough(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
 #if 0
@@ -178,7 +182,7 @@ void output_passthrough(uint8_t *usb_in, uint8_t * usb_out_buf)
 
 // passthrough
 // Verified
-void output_handshake(uint8_t *usb_in, uint8_t * usb_out_buf)
+void output_handshake(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
 #if 0
@@ -195,7 +199,7 @@ void output_handshake(uint8_t *usb_in, uint8_t * usb_out_buf)
 }
 
 // baudrate
-void output_baudrate(uint8_t *usb_in, uint8_t * usb_out_buf)
+void output_baudrate(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
 #if 0
@@ -211,7 +215,7 @@ void output_baudrate(uint8_t *usb_in, uint8_t * usb_out_buf)
 }
 
 // baudrate
-void output_hid(uint8_t *usb_in, uint8_t * usb_out_buf)
+void output_hid(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
 #if 0
@@ -226,7 +230,7 @@ void output_hid(uint8_t *usb_in, uint8_t * usb_out_buf)
 #endif
 }
 
-void output_report_0x80(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x80(uint8_t *buf, uint8_t *usb_out_buf)
 {
     switch (buf[1])
     {
@@ -261,7 +265,7 @@ void output_report_0x80(uint8_t *buf, uint8_t * usb_out_buf)
 
 static uint8_t joyStickMode = 0;
 
-void output_report_0x01_unknown_subcmd(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_unknown_subcmd(uint8_t *buf, uint8_t *usb_out_buf)
 {
     // usart_send_str("output_report_0x01_unknown_subcmd");
     char dbg[0x40] = {};
@@ -278,7 +282,7 @@ void output_report_0x01_unknown_subcmd(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 // Subcommand 0x08: Set shipment low power state
-void output_report_0x01_0x08_lowpower_state(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_0x08_lowpower_state(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     unsigned char rawData[64] = {
@@ -314,7 +318,7 @@ void output_report_0x01_0x08_lowpower_state(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 // Subcommand 0x02: Request device info
-void output_report_0x01_get_device_info(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_get_device_info(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
 #if 0
@@ -354,7 +358,7 @@ void output_report_0x01_get_device_info(uint8_t *buf, uint8_t * usb_out_buf)
 
 // Subcommand 0x03: Set input report mode
 /* todo */
-void output_report_0x01_set_report_mode(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_set_report_mode(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
@@ -374,7 +378,7 @@ void output_report_0x01_set_report_mode(uint8_t *buf, uint8_t * usb_out_buf)
 
 // Subcommand 0x04: Trigger buttons elapsed time
 /* todo */
-void output_report_0x01_trigger_elapsed(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_trigger_elapsed(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
@@ -391,7 +395,7 @@ void output_report_0x01_trigger_elapsed(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_readspi(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_readspi(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
 
@@ -420,7 +424,7 @@ void output_report_0x01_readspi(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_writespi(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_writespi(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -437,7 +441,7 @@ void output_report_0x01_writespi(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_erasespi(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_erasespi(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -452,7 +456,7 @@ void output_report_0x01_erasespi(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_set_lights(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_set_lights(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -463,7 +467,7 @@ void output_report_0x01_set_lights(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_set_homelight(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_set_homelight(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -474,7 +478,7 @@ void output_report_0x01_set_homelight(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_set_immu(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_set_immu(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -485,7 +489,7 @@ void output_report_0x01_set_immu(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_set_immu_sensitivity(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_set_immu_sensitivity(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -496,7 +500,7 @@ void output_report_0x01_set_immu_sensitivity(uint8_t *buf, uint8_t * usb_out_buf
 }
 
 /* todo */
-void output_report_0x01_set_vibration(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_set_vibration(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -507,7 +511,7 @@ void output_report_0x01_set_vibration(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -594,7 +598,7 @@ void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t * usb_out_buf)
     }
 }
 
-void output_report_0x10(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x10(uint8_t *buf, uint8_t *usb_out_buf)
 {
     /** nothing **/
     // Joy-con does not reply when Output Report is 0x10
@@ -602,7 +606,7 @@ void output_report_0x10(uint8_t *buf, uint8_t * usb_out_buf)
 }
 
 // Sub command !
-void output_report_0x01(uint8_t *buf, uint8_t * usb_out_buf)
+void output_report_0x01(uint8_t *buf, uint8_t *usb_out_buf)
 {
     uint8_t subCmd = buf[10];
 
@@ -668,90 +672,69 @@ void output_report_0x01(uint8_t *buf, uint8_t * usb_out_buf)
 
 volatile bool working = false;
 
+uint8_t last_usb_buf[0x40];
+uint8_t usb_packet_flags = 0;
+
 void hid_rx_cb(uint8_t *buf, uint16_t len)
 {
-    usart_send_str("Recv: ");
-    dump_hex(buf, len);
-
-    uint8_t cmd = buf[0];
-    uint8_t usb_out_buf[0x40];
-
-    switch (cmd)
-    {
-    case kReportIdOutput01:
-        output_report_0x01(buf, usb_out_buf);
-        break;
-    case kReportIdOutput10:
-        output_report_0x10(buf, usb_out_buf);
-        break;
-
-    case kUsbReportIdOutput80:
-        output_report_0x80(buf, usb_out_buf);
-        break;
-
-    case kReportIdInput30:
-    default:
-        input_report_0x30(buf, usb_out_buf);
-        break;
-    }
-
-    if (kReportIdOutput10 != cmd)
-    {
-        usart_send_str("Response: ");
-        dump_hex(usb_out_buf, 0x40);
-    }
-    usart_send_str(" ===== ");
+    memcpy(last_usb_buf, buf, len);
+    usb_packet_flags = 0x01;
 }
 
 void sys_tick_handler(void)
-{    
+{
+    /*
     uint8_t usb_out_buf[0x40];
-#if 0
-    uint8_t cmd = joyStickMode;
-    int len = usb_read_packet(ENDPOINT_HID_OUT, usb_in_buf, 0x40);
-    if (len > 1)
-    {
-        cmd = usb_in_buf[0];
-        
-        usart_send_str("Packet received from switch: ");
-        dump_hex(usb_in_buf, 0x40);
-    }
-
-#if 0
-    // dbg !
-    char dbg[0x40];
-    sprintf(dbg, "joyStickMode: %02x", cmd);
-    usart_send_str(dbg);
-#endif
-
-    switch (cmd)
-    {
-    case kReportIdOutput01:
-        output_report_0x01();
-        break;
-    case kReportIdOutput10:
-        output_report_0x10();
-        break;
-
-    case kUsbReportIdOutput80:
-        output_report_0x80();
-        break;
-
-    case kReportIdInput30:
-    default:
-        input_report_0x30();
-        break;
-    }
-
-    if (cmd != joyStickMode) {
-        
-        usart_send_str("Response: ");
-        dump_hex(usb_out_buf, 0x40);
-    }
-#else
     if (joyStickMode == 0x30)
     {
         input_report_0x30(NULL, usb_out_buf);
     }
-#endif
+    */
+    // memcpy(last_usb_buf, buf, len);
+    //last_usb_buf[0] = 0x30;
+    //usb_packet_flags = 0x01;
+}
+
+void handle_packet()
+{
+    // packet received handle it...
+    if (usb_packet_flags)
+    {
+        usb_packet_flags = 0;
+
+        uint8_t current_usb_buf[0x40];
+        memcpy(current_usb_buf, last_usb_buf, 0x40);
+
+        uint8_t cmd = current_usb_buf[0];
+        uint8_t usb_out_buf[0x40];
+
+        usart_send_str("Recv: ");
+        dump_hex(current_usb_buf, 0x40);
+
+        switch (cmd)
+        {
+        case kReportIdOutput01:
+            output_report_0x01(current_usb_buf, usb_out_buf);
+            break;
+        case kReportIdOutput10:
+            output_report_0x10(current_usb_buf, usb_out_buf);
+            break;
+
+        case kUsbReportIdOutput80:
+            output_report_0x80(current_usb_buf, usb_out_buf);
+            break;
+
+        case kReportIdInput30:
+            //default:
+            input_report_0x30(current_usb_buf, usb_out_buf);
+            break;
+        }
+
+        if (kReportIdOutput10 != cmd)
+        {
+            usart_send_str("Response: ");
+            dump_hex(usb_out_buf, 0x40);
+        }
+        usart_send_str(" ===== ");
+    }
 }
