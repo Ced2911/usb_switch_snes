@@ -22,7 +22,7 @@ static const uint8_t mac_addr[0x06] = {0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
 
 static char ascii_buffer[0x100] = {};
 
-#define usart_send_str(X)
+// #define usart_send_str(X)
 
 void dump_hex(const void *data, size_t size)
 {
@@ -46,6 +46,7 @@ void dump_hex(const void *data, size_t size)
     //usb_poll();
     usart_send_str(ascii_buffer);
 }
+#define dump_hex(...)
 
 #ifndef TEST
 static mutex_t m;
