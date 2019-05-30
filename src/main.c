@@ -6,6 +6,7 @@
 #ifndef TEST
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
+#include <libopencm3/cm3/sync.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #endif
@@ -21,6 +22,8 @@ static const uint8_t mac_addr[0x06] = {0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
 
 static char ascii_buffer[0x100] = {};
 
+#define usart_send_str(X)
+
 void dump_hex(const void *data, size_t size)
 {
     char *ptr = ascii_buffer;
@@ -32,7 +35,7 @@ void dump_hex(const void *data, size_t size)
         //*ptr++ = (HEX_CHAR((b >> 4) & 0xf));
         //*ptr++ = (HEX_CHAR(b & 0xf));
         //*ptr++ = ' ';
-        ptr += sprintf(ptr, "%02x ", b);
+        ptr += sprintf(ptr, "0x%02x, ", b);
     }
 
     *ptr++ = '\r';
@@ -45,6 +48,17 @@ void dump_hex(const void *data, size_t size)
 }
 
 #ifndef TEST
+static mutex_t m;
+void mlock()
+{
+    mutex_lock(&m);
+}
+
+void munlock()
+{
+    mutex_unlock(&m);
+}
+
 void handle_packet();
 
 void systick_iterrupt_init()
@@ -71,7 +85,7 @@ int main(void)
     while (1)
     {
         usb_poll();
-        handle_packet();
+        // handle_packet();
     }
 }
 #endif
@@ -673,38 +687,10 @@ void output_report_0x01(uint8_t *buf, uint8_t *usb_out_buf)
 volatile bool working = false;
 
 uint8_t last_usb_buf[0x40];
-uint8_t usb_packet_flags = 0;
+volatile uint8_t usb_packet_flags = 0;
 
-void hid_rx_cb(uint8_t *buf, uint16_t len)
-{
-    memcpy(last_usb_buf, buf, len);
-    usb_packet_flags = 0x01;
-}
-
-void sys_tick_handler(void)
-{
-    /*
-    uint8_t usb_out_buf[0x40];
-    if (joyStickMode == 0x30)
-    {
-        input_report_0x30(NULL, usb_out_buf);
-    }
-    */
-    // memcpy(last_usb_buf, buf, len);
-    //last_usb_buf[0] = 0x30;
-    //usb_packet_flags = 0x01;
-}
-
-void handle_packet()
-{
-    // packet received handle it...
-    if (usb_packet_flags)
-    {
-        usb_packet_flags = 0;
-
-        uint8_t current_usb_buf[0x40];
-        memcpy(current_usb_buf, last_usb_buf, 0x40);
-
+void do_work(uint8_t * current_usb_buf, uint8_t len) {
+    
         uint8_t cmd = current_usb_buf[0];
         uint8_t usb_out_buf[0x40];
 
@@ -736,5 +722,50 @@ void handle_packet()
             dump_hex(usb_out_buf, 0x40);
         }
         usart_send_str(" ===== ");
+}
+
+void handle_packet()
+{
+    // packet received handle it...
+    if (usb_packet_flags & 0x01)
+    {
+        usb_packet_flags = 0;
+
+        uint8_t current_usb_buf[0x40];
+        mlock();
+        memcpy(current_usb_buf, last_usb_buf, 0x40);
+        munlock();
+
+        do_work(current_usb_buf, 0x40);
     }
 }
+
+
+void hid_rx_cb(uint8_t *buf, uint16_t len)
+{
+#if 0
+    mlock();
+    memcpy(last_usb_buf, buf, len);
+    usb_packet_flags = 0x01;
+    munlock();
+#else
+    do_work(buf, len);
+#endif
+}
+
+void sys_tick_handler(void)
+{
+#if 1
+    uint8_t usb_out_buf[0x40];
+    if (joyStickMode == 0x30) {
+        input_report_0x30(NULL, usb_out_buf);
+     
+    }
+#else
+    mlock();
+    last_usb_buf[0] = 0x30;
+    usb_packet_flags = 0x01;
+    munlock();
+#endif
+}
+
