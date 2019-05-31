@@ -79,17 +79,17 @@ int main(void)
     hw_init();
     usart_init();
 
-    //while(1)
-    //    usart_send_str("Bam\n");
     usb_setup();
     systick_iterrupt_init();
 
     usart_send_str("========== start =========\r\n====================\r\n====================\r\n");
+    uart_flush();
 
     while (1)
     {
         usb_poll();
         handle_input_0x30();
+        uart_flush();
         // handle_packet();
     }
 }
