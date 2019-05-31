@@ -22,7 +22,7 @@ static const uint8_t mac_addr[0x06] = {0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
 
 static char ascii_buffer[0x100] = {};
 
-#define usart_send_str(X)
+// #define usart_send_str(X)
 
 void dump_hex(const void *data, size_t size)
 {
@@ -62,12 +62,15 @@ void munlock()
 
 void handle_packet();
 
+void handle_input_0x30();
+
 void systick_iterrupt_init()
 {
 
-    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
+    //systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
     /* SysTick interrupt every N clock pulses: set reload to N-1 */
-    systick_set_reload(((9000000 / 9000) * 15) - 1); // 15 ms ?
+    //systick_set_reload(((9000000 / 9000) * 15) - 1); // 15 ms ?
+    systick_set_frequency(15 * 1000, 72000000);
     systick_counter_enable();
 }
 
@@ -86,6 +89,7 @@ int main(void)
     while (1)
     {
         usb_poll();
+        handle_input_0x30();
         // handle_packet();
     }
 }
@@ -363,7 +367,7 @@ void output_report_0x01_get_device_info(uint8_t *buf, uint8_t *usb_out_buf)
 #else
     unsigned char rawData[64] = {
         0x21, 0x05, 0x8E, 0x84, 0x00, 0x12, 0x01, 0x18, 0x80, 0x01, 0x18, 0x80, 0x80,
-        0x82, 0x02, 0x03, 0x48, 0x01, 0x02, 0xA2, 0x55, 0x79, 0xAB, 0x78, 0xCC, 0x01, 0x01};
+        0x82, 0x02, 0x03, 0x48, 0x01, 0x02, mac_addr[5], mac_addr[4], mac_addr[3], mac_addr[2], mac_addr[1], mac_addr[0], 0x01, 0x01};
     static int iii = 0;
     rawData[0x01] = iii++;
     memcpy(usb_out_buf, rawData, 0x40);
@@ -690,39 +694,40 @@ volatile bool working = false;
 uint8_t last_usb_buf[0x40];
 volatile uint8_t usb_packet_flags = 0;
 
-void do_work(uint8_t * current_usb_buf, uint8_t len) {
-    
-        uint8_t cmd = current_usb_buf[0];
-        uint8_t usb_out_buf[0x40];
+void do_work(uint8_t *current_usb_buf, uint8_t len)
+{
 
-        usart_send_str("Recv: ");
-        dump_hex(current_usb_buf, 0x40);
+    uint8_t cmd = current_usb_buf[0];
+    uint8_t usb_out_buf[0x40];
 
-        switch (cmd)
-        {
-        case kReportIdOutput01:
-            output_report_0x01(current_usb_buf, usb_out_buf);
-            break;
-        case kReportIdOutput10:
-            output_report_0x10(current_usb_buf, usb_out_buf);
-            break;
+    usart_send_str("Recv: ");
+    dump_hex(current_usb_buf, 0x40);
 
-        case kUsbReportIdOutput80:
-            output_report_0x80(current_usb_buf, usb_out_buf);
-            break;
+    switch (cmd)
+    {
+    case kReportIdOutput01:
+        output_report_0x01(current_usb_buf, usb_out_buf);
+        break;
+    case kReportIdOutput10:
+        output_report_0x10(current_usb_buf, usb_out_buf);
+        break;
 
-        case kReportIdInput30:
-            //default:
-            input_report_0x30(current_usb_buf, usb_out_buf);
-            break;
-        }
+    case kUsbReportIdOutput80:
+        output_report_0x80(current_usb_buf, usb_out_buf);
+        break;
 
-        if (kReportIdOutput10 != cmd)
-        {
-            usart_send_str("Response: ");
-            dump_hex(usb_out_buf, 0x40);
-        }
-        usart_send_str(" ===== ");
+    case kReportIdInput30:
+        //default:
+        input_report_0x30(current_usb_buf, usb_out_buf);
+        break;
+    }
+
+    if (kReportIdOutput10 != cmd)
+    {
+        usart_send_str("Response: ");
+        dump_hex(usb_out_buf, 0x40);
+    }
+    usart_send_str(" ===== ");
 }
 
 void handle_packet()
@@ -741,7 +746,6 @@ void handle_packet()
     }
 }
 
-
 void hid_rx_cb(uint8_t *buf, uint16_t len)
 {
 #if 0
@@ -754,13 +758,26 @@ void hid_rx_cb(uint8_t *buf, uint16_t len)
 #endif
 }
 
+static int sys_0x30 = 0;
+
+void handle_input_0x30()
+{
+
+    uint8_t usb_out_buf[0x40];
+    if (sys_0x30 == 1)
+    {
+        input_report_0x30(NULL, usb_out_buf);
+        usb_poll();
+        sys_0x30 = 0;
+    }
+}
+
 void sys_tick_handler(void)
 {
 #if 1
-    uint8_t usb_out_buf[0x40];
-    if (joyStickMode == 0x30) {
-        input_report_0x30(NULL, usb_out_buf);
-     
+    if (joyStickMode == 0x30)
+    {
+        sys_0x30 = 1;
     }
 #else
     mlock();
@@ -769,4 +786,3 @@ void sys_tick_handler(void)
     munlock();
 #endif
 }
-
