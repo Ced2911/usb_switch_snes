@@ -76,16 +76,16 @@ int main(void)
     hw_init();
     usart_init();
 
-    //while(1)
-    //    usart_send_str("Bam\n");
     usb_setup();
     systick_iterrupt_init();
 
     usart_send_str("========== start =========\r\n====================\r\n====================\r\n");
+    uart_flush();
 
     while (1)
     {
         usb_poll();
+        uart_flush();
         // handle_packet();
     }
 }
@@ -690,39 +690,40 @@ volatile bool working = false;
 uint8_t last_usb_buf[0x40];
 volatile uint8_t usb_packet_flags = 0;
 
-void do_work(uint8_t * current_usb_buf, uint8_t len) {
-    
-        uint8_t cmd = current_usb_buf[0];
-        uint8_t usb_out_buf[0x40];
+void do_work(uint8_t *current_usb_buf, uint8_t len)
+{
 
-        usart_send_str("Recv: ");
-        dump_hex(current_usb_buf, 0x40);
+    uint8_t cmd = current_usb_buf[0];
+    uint8_t usb_out_buf[0x40];
 
-        switch (cmd)
-        {
-        case kReportIdOutput01:
-            output_report_0x01(current_usb_buf, usb_out_buf);
-            break;
-        case kReportIdOutput10:
-            output_report_0x10(current_usb_buf, usb_out_buf);
-            break;
+    usart_send_str("Recv: ");
+    dump_hex(current_usb_buf, 0x40);
 
-        case kUsbReportIdOutput80:
-            output_report_0x80(current_usb_buf, usb_out_buf);
-            break;
+    switch (cmd)
+    {
+    case kReportIdOutput01:
+        output_report_0x01(current_usb_buf, usb_out_buf);
+        break;
+    case kReportIdOutput10:
+        output_report_0x10(current_usb_buf, usb_out_buf);
+        break;
 
-        case kReportIdInput30:
-            //default:
-            input_report_0x30(current_usb_buf, usb_out_buf);
-            break;
-        }
+    case kUsbReportIdOutput80:
+        output_report_0x80(current_usb_buf, usb_out_buf);
+        break;
 
-        if (kReportIdOutput10 != cmd)
-        {
-            usart_send_str("Response: ");
-            dump_hex(usb_out_buf, 0x40);
-        }
-        usart_send_str(" ===== ");
+    case kReportIdInput30:
+        //default:
+        input_report_0x30(current_usb_buf, usb_out_buf);
+        break;
+    }
+
+    if (kReportIdOutput10 != cmd)
+    {
+        usart_send_str("Response: ");
+        dump_hex(usb_out_buf, 0x40);
+    }
+    usart_send_str(" ===== ");
 }
 
 void handle_packet()
@@ -741,7 +742,6 @@ void handle_packet()
     }
 }
 
-
 void hid_rx_cb(uint8_t *buf, uint16_t len)
 {
 #if 0
@@ -758,9 +758,9 @@ void sys_tick_handler(void)
 {
 #if 1
     uint8_t usb_out_buf[0x40];
-    if (joyStickMode == 0x30) {
+    if (joyStickMode == 0x30)
+    {
         input_report_0x30(NULL, usb_out_buf);
-     
     }
 #else
     mlock();
@@ -769,4 +769,3 @@ void sys_tick_handler(void)
     munlock();
 #endif
 }
-
