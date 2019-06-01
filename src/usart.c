@@ -2,6 +2,8 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/usart.h>
 
+#define UART_DBG    1
+
 #define UART_BUFF_SIZE 1024
 static uint8_t uart_buffer[UART_BUFF_SIZE];
 static uint8_t *uart_current_ptr;
@@ -30,14 +32,17 @@ void usart_init()
 
 void usart_send_str(char *p)
 {
+    #if UART_DBG
     int len = strlen(p);
     memcpy(uart_current_ptr, p, len);
     uart_current_ptr += len;
     *uart_current_ptr++ = '\n';
+    #endif
 }
 
 void uart_flush()
 {
+    #if UART_DBG
     char *ptr = (char *)uart_buffer;
     char *end = (char *)uart_current_ptr;
     if (ptr != end)
@@ -51,4 +56,5 @@ void uart_flush()
 
     // reset
     uart_current_ptr = uart_buffer;
+    #endif
 }

@@ -70,13 +70,14 @@ void systick_iterrupt_init()
     //systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
     /* SysTick interrupt every N clock pulses: set reload to N-1 */
     //systick_set_reload(((9000000 / 9000) * 15) - 1); // 15 ms ?
-    systick_set_frequency(15 * 1000, 72000000);
+    systick_set_frequency(60, 72000000);
     systick_counter_enable();
 }
 
 int main(void)
 {
     hw_init();
+    hw_led_off();
     usart_init();
 
     usb_setup();
@@ -85,10 +86,12 @@ int main(void)
     usart_send_str("========== start =========\r\n====================\r\n====================\r\n");
     uart_flush();
 
+    hw_led_on();
+
     while (1)
     {
-        usb_poll();
         handle_input_0x30();
+        usb_poll();
         uart_flush();
         // handle_packet();
     }
@@ -145,6 +148,8 @@ void input_report_0x30(uint8_t *usb_in, uint8_t *usb_out_buf)
 
     fill_input_report((struct ControllerData *)&usb_out_buf[0x01]);
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+
+    hw_led_toggle();
 }
 
 // Subcommand 0x10: SPI flash read
@@ -186,7 +191,10 @@ void output_mac_addr(uint8_t *usb_in, uint8_t *usb_out_buf)
 // passthrough
 void output_passthrough(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
-    usart_send_str(__func__);
+    char dbg[0x40] = {};
+    sprintf(dbg, "output_passthrough 0x%02x", usb_in[1]);
+    usart_send_str(dbg);
+    //usart_send_str(__func__);
 #if 0
     usb_out_buf[0x00] = kUsbReportIdInput81;
     usb_out_buf[0x01] = usb_in_buf[1];
@@ -355,7 +363,11 @@ void output_report_0x01_get_device_info(uint8_t *buf, uint8_t *usb_out_buf)
 /* todo */
 void output_report_0x01_set_report_mode(uint8_t *buf, uint8_t *usb_out_buf)
 {
-    usart_send_str(__func__);
+    //usart_send_str(__func__);
+    char dbg[0x40] = {};
+    sprintf(dbg, "%s 0x%02x", __func__, buf[11]);
+    usart_send_str(dbg);
+
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -385,8 +397,14 @@ void output_report_0x01_trigger_elapsed(uint8_t *buf, uint8_t *usb_out_buf)
     resp->subcommand = 0x04;
 
     fill_input_report(&resp->controller_data);
+   // usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+    // ba
+    const uint8_t resp_[] = {
+        0x21, 0x0A, 0x8E, 0x84, 0x00, 0x12, 0x01, 0x18, 0x80, 0x01, 0x18, 0x80, 0x80,
+        0x83, 0x04, 0x00, 0xCC, 0x00, 0xEE, 0x00, 0xFF, 0x00, 0x00, 0x00};
+
+    usb_write_packet(ENDPOINT_HID_IN, resp_, sizeof(resp_));
 }
 
 /* todo */
@@ -736,7 +754,8 @@ void hid_rx_cb(uint8_t *buf, uint16_t len)
     usb_packet_flags = 0x01;
     munlock();
 #else
-    do_work(buf, len);
+    if (buf[0] != 0x00)
+        do_work(buf, len);
 #endif
 }
 
@@ -749,7 +768,6 @@ void handle_input_0x30()
     if (sys_0x30 == 1)
     {
         input_report_0x30(NULL, usb_out_buf);
-        usb_poll();
         sys_0x30 = 0;
     }
 }
