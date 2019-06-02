@@ -4,7 +4,7 @@
 
 #define UART_DBG    1
 
-#define UART_BUFF_SIZE 1024
+#define UART_BUFF_SIZE 1024*4
 static uint8_t uart_buffer[UART_BUFF_SIZE];
 static uint8_t *uart_current_ptr;
 

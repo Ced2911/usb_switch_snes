@@ -175,6 +175,18 @@ void input_sub_cmd_0x10(uint8_t *usb_in, uint8_t *usb_out_buf)
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
+// passthrough
+void output_passthrough(uint8_t *usb_in, uint8_t *usb_out_buf)
+{
+    char dbg[0x40] = {};
+    sprintf(dbg, "output_passthrough 0x%02x", usb_in[1]);
+    usart_send_str(dbg);
+
+    const uint8_t response_h[] = {0x81, usb_in[1], 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+}
+
 // 80 01
 void output_mac_addr(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
@@ -182,79 +194,47 @@ void output_mac_addr(uint8_t *usb_in, uint8_t *usb_out_buf)
     // Verified
     // hard coded response !!!
     const uint8_t response_h[] = {
-        kUsbReportIdInput81, 0x01, 0x00, kUsbDeviceTypeProController,
+        kUsbReportIdInput81, kSubTypeRequestMac, 0x00, kUsbDeviceTypeProController,
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]};
     memcpy(usb_out_buf, response_h, sizeof(response_h));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
-// passthrough
-void output_passthrough(uint8_t *usb_in, uint8_t *usb_out_buf)
-{
-    char dbg[0x40] = {};
-    sprintf(dbg, "output_passthrough 0x%02x", usb_in[1]);
-    usart_send_str(dbg);
-    //usart_send_str(__func__);
-#if 0
-    usb_out_buf[0x00] = kUsbReportIdInput81;
-    usb_out_buf[0x01] = usb_in_buf[1];
-
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#else
-    const uint8_t response_h[] = {0x81, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    memcpy(usb_out_buf, response_h, sizeof(response_h));
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#endif
-}
 
 // passthrough
 // Verified
 void output_handshake(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
-#if 0
-    usb_out_buf[0x00] = kUsbReportIdInput81;
-    usb_out_buf[0x01] = usb_in_buf[1];
-
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#else
-    const uint8_t response_h[] = {0x81, 0x02};
+    const uint8_t response_h[] = {0x81, kSubTypeHandshake};
     memset(usb_out_buf, 0, 0x40);
     memcpy(usb_out_buf, response_h, sizeof(response_h));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#endif
 }
 
 // baudrate
 void output_baudrate(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
-#if 0
-    usb_out_buf[0x00] = kUsbReportIdInput81;
-    usb_out_buf[0x01] = usb_in_buf[1];
-
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#else
-    const uint8_t response_h[] = {0x81, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    const uint8_t response_h[] = {0x81, kSubTypeBaudRate, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     memcpy(usb_out_buf, response_h, sizeof(response_h));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#endif
 }
 
-// baudrate
-void output_hid(uint8_t *usb_in, uint8_t *usb_out_buf)
+void output_enable_usb_timeout(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
-#if 0
-    usb_out_buf[0x00] = kUsbReportIdInput81;
-    usb_out_buf[0x01] = usb_in_buf[1];
-
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#else
-    const uint8_t response_h[] = {0x81, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    const uint8_t response_h[] = {0x81, kSubTypeDisableUsbTimeout, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     memcpy(usb_out_buf, response_h, sizeof(response_h));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-#endif
+}
+
+void output_disable_usb_timeout(uint8_t *usb_in, uint8_t *usb_out_buf)
+{
+    usart_send_str(__func__);
+    const uint8_t response_h[] = {0x81, kSubTypeEnableUsbTimeout, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
 void output_report_0x80(uint8_t *buf, uint8_t *usb_out_buf)
@@ -274,12 +254,11 @@ void output_report_0x80(uint8_t *buf, uint8_t *usb_out_buf)
         break;
     // usb timeout
     case 0x04:
-        output_hid(buf, usb_out_buf);
+        output_enable_usb_timeout(buf, usb_out_buf);
         break;
     case 0x05:
-        output_passthrough(buf, usb_out_buf);
+        output_disable_usb_timeout(buf, usb_out_buf);
         break;
-        // custom ?
     case 0x91:
     case 0x92:
         output_passthrough(buf, usb_out_buf);
@@ -397,7 +376,7 @@ void output_report_0x01_trigger_elapsed(uint8_t *buf, uint8_t *usb_out_buf)
     resp->subcommand = 0x04;
 
     fill_input_report(&resp->controller_data);
-   // usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+    // usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 
     // ba
     const uint8_t resp_[] = {
@@ -724,8 +703,8 @@ void do_work(uint8_t *current_usb_buf, uint8_t len)
 
     if (kReportIdOutput10 != cmd)
     {
-        //usart_send_str("Response: ");
-        //dump_hex(usb_out_buf, 0x10);
+        usart_send_str("Response: ");
+        dump_hex(usb_out_buf, 0x10);
     }
     usart_send_str(" ===== ");
 }
