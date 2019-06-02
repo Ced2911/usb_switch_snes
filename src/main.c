@@ -26,16 +26,27 @@ static char ascii_buffer[0x100] = {};
 
 void dump_hex(const void *data, size_t size)
 {
+#if 1
     char *ptr = ascii_buffer;
     size_t i;
     size = min(size, 0x100);
     for (i = 0; i < size; ++i)
     {
         unsigned char b = ((unsigned char *)data)[i];
-        //*ptr++ = (HEX_CHAR((b >> 4) & 0xf));
-        //*ptr++ = (HEX_CHAR(b & 0xf));
-        //*ptr++ = ' ';
-        ptr += sprintf(ptr, "0x%x,", b);
+        ptr += sprintf(ptr, "%02x ", b);
+    }
+
+    //usb_send_serial_data(ptr, ptr - ascii);
+    //usb_poll();
+    usart_send_str(ascii_buffer);
+#else
+    uint32_t *u32_data = (uint32_t *)data;
+    char *ptr = ascii_buffer;
+    size_t i;
+    size = min(size, 0x100) / sizeof(uint32_t);
+    for (i = 0; i < size; ++i)
+    {
+        ptr += sprintf(ptr, "0x%x,", u32_data[i]);
     }
 
     *ptr++ = '\r';
@@ -45,6 +56,7 @@ void dump_hex(const void *data, size_t size)
     //usb_send_serial_data(ptr, ptr - ascii);
     //usb_poll();
     usart_send_str(ascii_buffer);
+#endif
 }
 //#define dump_hex(...)
 
@@ -105,6 +117,7 @@ static uint8_t tick = 0;
 
 void fill_input_report(struct ControllerData *controller_data)
 {
+#if 0
     static int x = 0;
     static int dir = 1;
     x += dir;
@@ -115,6 +128,7 @@ void fill_input_report(struct ControllerData *controller_data)
 
     // increment tick by 3
     tick += 3;
+    //tick++;
 
     controller_data->timestamp = tick;
 
@@ -136,7 +150,16 @@ void fill_input_report(struct ControllerData *controller_data)
 
     controller_data->battery_level = /*battery_level_charging | */ battery_level_full;
     controller_data->connection_info = 0x1;
-    controller_data->vibrator_input_report = 0x80;
+    //controller_data->vibrator_input_report = 0x80;
+    controller_data->vibrator_input_report = 0x07;
+#else
+    unsigned char rawData[12] = {
+        0x83, 0x71, 0x00, 0x80, 0x00, 0xBA, 0x07, 0x6B, 0x47, 0xF7, 0x72, 0x0C};
+    memcpy(controller_data, rawData, sizeof(rawData));
+
+    tick += 3;
+    controller_data->timestamp = tick;
+#endif
 }
 
 // Standard full mode - input reports with IMU data instead of subcommand replies. Pushes current state @60Hz, or @120Hz if Pro Controller.
@@ -145,6 +168,14 @@ void input_report_0x30(uint8_t *usb_in, uint8_t *usb_out_buf)
     //usart_send_str(__func__);
     // report ID
     usb_out_buf[0x00] = kReportIdInput30;
+    /*
+    uint8_t p[] = {
+        0x21, 0x09, 0x8E, 0x84, 0x00, 0x12, 0x01, 0x18, 0x80, 0x01, 0x18, 0x80, 0x80,
+0x80, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 
+    };
+
+    memcpy(usb_out_buf, p, sizeof(p));
+    */
 
     fill_input_report((struct ControllerData *)&usb_out_buf[0x01]);
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
@@ -200,40 +231,47 @@ void output_mac_addr(uint8_t *usb_in, uint8_t *usb_out_buf)
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
-
 // passthrough
 // Verified
 void output_handshake(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
-    const uint8_t response_h[] = {0x81, kSubTypeHandshake};
     memset(usb_out_buf, 0, 0x40);
-    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    usb_out_buf[0] = 0x81;
+    usb_out_buf[1] = kSubTypeHandshake;
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
 // baudrate
+// Verified
 void output_baudrate(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
-    const uint8_t response_h[] = {0x81, kSubTypeBaudRate, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    memset(usb_out_buf, 0, 0x40);
+    usb_out_buf[0] = 0x81;
+    usb_out_buf[1] = 0x03;
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
+// baudrate
+// Verified
 void output_enable_usb_timeout(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
-    const uint8_t response_h[] = {0x81, kSubTypeDisableUsbTimeout, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    memset(usb_out_buf, 0, 0x40);
+    usb_out_buf[0] = 0x81;
+    usb_out_buf[1] = kSubTypeDisableUsbTimeout;
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
+// baudrate
+// Verified
 void output_disable_usb_timeout(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
-    const uint8_t response_h[] = {0x81, kSubTypeEnableUsbTimeout, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    memcpy(usb_out_buf, response_h, sizeof(response_h));
+    memset(usb_out_buf, 0, 0x40);
+    usb_out_buf[0] = 0x81;
+    usb_out_buf[1] = kSubTypeEnableUsbTimeout;
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
@@ -342,11 +380,8 @@ void output_report_0x01_get_device_info(uint8_t *buf, uint8_t *usb_out_buf)
 /* todo */
 void output_report_0x01_set_report_mode(uint8_t *buf, uint8_t *usb_out_buf)
 {
-    //usart_send_str(__func__);
-    char dbg[0x40] = {};
-    sprintf(dbg, "%s 0x%02x", __func__, buf[11]);
-    usart_send_str(dbg);
-
+    usart_send_str(__func__);
+#if 1
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
     // report ID
     usb_out_buf[0x00] = kReportIdInput21;
@@ -360,6 +395,14 @@ void output_report_0x01_set_report_mode(uint8_t *buf, uint8_t *usb_out_buf)
     joyStickMode = buf[11];
 
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#else
+    joyStickMode = buf[11];
+
+    memset(usb_out_buf, 0, 0x40);
+    usb_out_buf[0] = 0x81;
+    usb_out_buf[1] = 0x03;
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+#endif
 }
 
 // Subcommand 0x04: Trigger buttons elapsed time
@@ -522,9 +565,13 @@ void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
     sprintf(dbg, "pairing_type 0x%02x, 0x%02x", pairing_type, data->pairing.type);
     usart_send_str(dbg);
 
-    unsigned char rawData[] = {
-        0x21, 0x01, 0x8E, 0x84, 0x00, 0x12, 0x01, 0x18, 0x80, 0x01, 0x18, 0x80, 0x80, 0x82, 0x02,
-        0x03, 0x48, 0x01, 0x02, 0xA2, 0x55, 0x79, 0xAB, 0x78, 0xCC, 0x01, 0x01};
+    unsigned char rawData[64] = {
+        0x21, 0x91, 0x91, 0x00, 0x80, 0x00, 0xBB, 0xE7, 0x6A, 0x45, 0x07, 0x73,
+        0x09, 0x81, 0x01, 0x01, 0x36, 0x2E, 0xC6, 0x8A, 0xBB, 0x7C, 0x00, 0x25,
+        0x08, 0x50, 0x72, 0x6F, 0x20, 0x43, 0x6F, 0x6E, 0x74, 0x72, 0x6F, 0x6C,
+        0x6C, 0x65, 0x72, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x68, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00};
 
     static int iii = 0;
     rawData[0x01] = iii++;
@@ -538,6 +585,7 @@ void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
 */
     if (pairing_type == 0x01)
     {
+        /*
         // Ok
         //*ptr =
         *ptr++ = 0x01;
@@ -547,6 +595,16 @@ void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
         memcpy(usb_out_buf, rawData, sizeof(rawData));
 
         usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+        */
+        unsigned char paring_1[64] = {
+            0x21, 0x91, 0x91, 0x00, 0x80, 0x00, 0xBB, 0xE7, 0x6A, 0x45, 0x07, 0x73,
+            0x09, 0x81, 0x01, 0x01, 0x36, 0x2E, 0xC6, 0x8A, 0xBB, 0x7C, 0x00, 0x25,
+            0x08, 0x50, 0x72, 0x6F, 0x20, 0x43, 0x6F, 0x6E, 0x74, 0x72, 0x6F, 0x6C,
+            0x6C, 0x65, 0x72, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x68, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00};
+
+        usb_write_packet(ENDPOINT_HID_IN, paring_1, 0x40);
     }
     /* ex: pairing_type == 0x02
 01 0c 00 00 00 00 00 00 00 00 01 02 ba d8 e2 13 00 00 00 00 3b f8 cd 6a 00 00 00 04 ed ac e2 13 00 00 00 78 b9 d8 e2 13 00 00 00 50 ba d8 e2 13 00
@@ -554,6 +612,17 @@ void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
 
     else if (pairing_type == 0x02)
     {
+        unsigned char paring_2[64] = {
+            0x21, 0x98, 0x91, 0x00, 0x80, 0x00, 0xB9, 0x07, 0x6B, 0x46, 0x17, 0x73,
+            0x09, 0x81, 0x01, 0x02, 0xE5, 0x51, 0x63, 0x7E, 0xE3, 0x34, 0x82, 0x1E,
+            0xE5, 0x99, 0x24, 0x76, 0xCE, 0x2B, 0xA8, 0xB7, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00};
+        usb_write_packet(ENDPOINT_HID_IN, paring_2, 0x40);
+
+        /*
+        
         uint8_t ltkHash[] = {
             0x1A, 0xD3, 0x27, 0x14, 0x6F, 0x7E, 0x4F, 0xD7, 0x5D, 0x14, 0x6B, 0xEB,
             0x17, 0x5D, 0x7C, 0xE7};
@@ -569,9 +638,11 @@ void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
         memcpy(ptr, ltkHash, sizeof(ltkHash));
         memcpy(usb_out_buf, rawData, sizeof(rawData));
         usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+        */
     }
     else if (pairing_type == 0x03)
     {
+        /*
         uint8_t ltkHash[] = {
             0x1A, 0xD3, 0x27, 0x14, 0x6F, 0x7E, 0x4F, 0xD7, 0x5D, 0x14, 0x6B, 0xEB,
             0x17, 0x5D, 0x7C, 0xE7};
@@ -587,6 +658,18 @@ void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
         memcpy(ptr, ltkHash, sizeof(ltkHash));
         memcpy(usb_out_buf, rawData, sizeof(rawData));
         usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
+        */
+        /* Untitled4 (02/06/2019 21:16:35)
+   StartOffset(h): 00000000, EndOffset(h): 0000003F, Length(h): 00000040 */
+
+        unsigned char paring_3[64] = {
+            0x21, 0x9E, 0x91, 0x00, 0x80, 0x00, 0xBB, 0xF7, 0x6A, 0x45, 0x07, 0x73,
+            0x09, 0x81, 0x01, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00};
+        usb_write_packet(ENDPOINT_HID_IN, paring_3, 0x40);
     }
     else
     {
@@ -680,7 +763,7 @@ void do_work(uint8_t *current_usb_buf, uint8_t len)
     uint8_t usb_out_buf[0x40];
 
     usart_send_str("Recv: ");
-    dump_hex(current_usb_buf, 0x10);
+    dump_hex(current_usb_buf, 0x40);
 
     switch (cmd)
     {
@@ -704,7 +787,7 @@ void do_work(uint8_t *current_usb_buf, uint8_t len)
     if (kReportIdOutput10 != cmd)
     {
         usart_send_str("Response: ");
-        dump_hex(usb_out_buf, 0x10);
+        dump_hex(usb_out_buf, 0x40);
     }
     usart_send_str(" ===== ");
 }

@@ -4,7 +4,7 @@
 
 #define UART_DBG    1
 
-#define UART_BUFF_SIZE 1024*4
+#define UART_BUFF_SIZE 1024*8
 static uint8_t uart_buffer[UART_BUFF_SIZE];
 static uint8_t *uart_current_ptr;
 
@@ -18,7 +18,7 @@ void usart_init()
                   GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART2_TX);
 
     /* Setup UART parameters. */
-    usart_set_baudrate(USART2, 115200);
+    usart_set_baudrate(USART2, 921600/*115200*/);
     usart_set_databits(USART2, 8);
     usart_set_stopbits(USART2, USART_STOPBITS_1);
     usart_set_mode(USART2, USART_MODE_TX);
