@@ -9,6 +9,7 @@
 #include <libopencm3/cm3/sync.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#include "snes_min_ctrl.h"
 #endif
 
 #include "compat.h"
@@ -61,17 +62,6 @@ void dump_hex(const void *data, size_t size)
 //#define dump_hex(...)
 
 #ifndef TEST
-static mutex_t m;
-void mlock()
-{
-    mutex_lock(&m);
-}
-
-void munlock()
-{
-    mutex_unlock(&m);
-}
-
 void handle_packet();
 
 void handle_input_0x30();
@@ -100,12 +90,19 @@ int main(void)
 
     hw_led_on();
 
+    
+    uint8_t _packet[0x06] = {};
+
     while (1)
     {
         handle_input_0x30();
         usb_poll();
-        uart_flush();
         // handle_packet();
+
+        sns_plug();
+        sns_update(_packet);
+        dump_hex("snes", _packet);
+        uart_flush();
     }
 }
 #endif
