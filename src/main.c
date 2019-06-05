@@ -90,6 +90,8 @@ int main(void)
 
     hw_led_on();
 
+    sns_init();
+
     
     uint8_t _packet[0x06] = {};
 

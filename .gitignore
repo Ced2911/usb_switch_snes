@@ -8,3 +8,4 @@
 .*
 test/build*
 test/cmake-*
+bin
