@@ -2,9 +2,9 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/usart.h>
 
-#define UART_DBG    1
+#define UART_DBG 1
 
-#define UART_BUFF_SIZE 1024*8
+#define UART_BUFF_SIZE 1024 * 8
 static uint8_t uart_buffer[UART_BUFF_SIZE];
 static uint8_t *uart_current_ptr;
 
@@ -18,7 +18,7 @@ void usart_init()
                   GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART2_TX);
 
     /* Setup UART parameters. */
-    usart_set_baudrate(USART2, 921600/*115200*/);
+    usart_set_baudrate(USART2, 921600 /*115200*/);
     usart_set_databits(USART2, 8);
     usart_set_stopbits(USART2, USART_STOPBITS_1);
     usart_set_mode(USART2, USART_MODE_TX);
@@ -30,19 +30,28 @@ void usart_init()
     uart_current_ptr = uart_buffer;
 }
 
+void usart_send_direct(char *p)
+{
+    int len = strlen(p);
+    // send uart
+    while (len-- > 0)
+    {
+        usart_send_blocking(USART2, *p++);
+    }
+}
 void usart_send_str(char *p)
 {
-    #if UART_DBG
+#if UART_DBG
     int len = strlen(p);
     memcpy(uart_current_ptr, p, len);
     uart_current_ptr += len;
     *uart_current_ptr++ = '\n';
-    #endif
+#endif
 }
 
 void uart_flush()
 {
-    #if UART_DBG
+#if UART_DBG
     char *ptr = (char *)uart_buffer;
     char *end = (char *)uart_current_ptr;
     if (ptr != end)
@@ -56,5 +65,5 @@ void uart_flush()
 
     // reset
     uart_current_ptr = uart_buffer;
-    #endif
+#endif
 }

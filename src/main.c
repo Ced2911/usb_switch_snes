@@ -76,7 +76,27 @@ void systick_iterrupt_init()
     systick_counter_enable();
 }
 
-int main(void)
+int main()
+{
+    hw_init();
+    hw_led_off();
+    usart_init();
+    usart_send_str("========== start =========\r\n====================\r\n====================\r\n");
+
+    sns_init();
+    uint8_t _packet[0x06] = {};
+    while (1)
+    {
+        usart_send_direct("sns_plug...");
+        sns_plug();
+        usart_send_direct("sns_plug ok");
+        sns_update(_packet);
+        dump_hex("snes", _packet);
+        uart_flush();
+    }
+}
+
+int usbmain(void)
 {
     hw_init();
     hw_led_off();
@@ -92,7 +112,6 @@ int main(void)
 
     sns_init();
 
-    
     uint8_t _packet[0x06] = {};
 
     while (1)

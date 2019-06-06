@@ -22,38 +22,6 @@ void hw_led_toggle()
 
 void hw_init()
 {
-#if 0
-    rcc_clock_setup_in_hsi_out_48mhz();
-	//rcc_clock_setup_in_hse_8mhz_out_72mhz();
-    rcc_periph_clock_enable(RCC_GPIOA);
-    rcc_periph_clock_enable(RCC_GPIOB);
-    
-	rcc_periph_reset_pulse(RST_USB);
-
-    gpio_set_mode(GPIOA,
-                  GPIO_MODE_OUTPUT_10_MHZ,
-                  GPIO_CNF_OUTPUT_PUSHPULL,
-                  GPIO12);
-
-    gpio_clear(GPIOA, GPIO12);
-
-    gpio_set_mode(GPIOB,
-                  GPIO_MODE_OUTPUT_10_MHZ,
-                  GPIO_CNF_OUTPUT_PUSHPULL,
-                  GPIO12);
-
-    gpio_clear(GPIOB, GPIO12);
-
-
-	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO8);
-
-
-    for (unsigned i = 0; i < 800000; i++)
-    {
-        __asm__("nop");
-    }
-    gpio_set(GPIOB, GPIO12);
-#else
     rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
 	rcc_periph_clock_enable(RCC_GPIOA);
@@ -75,6 +43,4 @@ void hw_init()
     {
         __asm__("nop");
     }
-
-#endif
 }
