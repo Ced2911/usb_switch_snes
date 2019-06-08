@@ -66,14 +66,73 @@ void handle_packet();
 
 void handle_input_0x30();
 
-void systick_iterrupt_init()
+void systick_iterrupt_init(void)
 {
 
     //systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
     /* SysTick interrupt every N clock pulses: set reload to N-1 */
     //systick_set_reload(((9000000 / 9000) * 15) - 1); // 15 ms ?
-    systick_set_frequency(60, 72000000);
+    systick_set_frequency(60, rcc_ahb_frequency);
     systick_counter_enable();
+}
+
+#define CTRLR_UNINITILIZED 0
+#define CTRLR_INITILIZED 1
+#define CTRLR_PRESENT 2
+
+uint8_t state = CTRLR_UNINITILIZED;
+
+uint8_t _packet[0x06] = {};
+void sys_tick_handler(void)
+{
+    uint8_t buf[3] = {0, 0, 0};
+    buf[0] = 0;
+    buf[1] = 0;
+    buf[2] = 0;
+
+    if (state == CTRLR_UNINITILIZED)
+    {
+
+        // init
+        const uint8_t _packet_0a[] = {0xf0, 0x55};
+        const uint8_t _packet_0b[] = {0xfb, 0x00};
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0a, sizeof(_packet_0a), NULL, 0);
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0b, sizeof(_packet_0b), NULL, 0);
+
+        /*
+        const uint8_t _packet_0c[] = {0xfe, 0x00};
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0c, sizeof(_packet_0c), NULL, 0);
+
+        // Disable encryption
+        const uint8_t _packet_01[] = {0xf0, 0xaa};
+        const uint8_t _packet_02[] = {0x40, 0, 0, 0, 0, 0, 0};
+        const uint8_t _packet_03[] = {0x40, 0, 0, 0, 0};
+
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_01, sizeof(_packet_01), NULL, 0);
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_02, sizeof(_packet_02), NULL, 0);
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_02, sizeof(_packet_02), NULL, 0);
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_03, sizeof(_packet_03), NULL, 0);
+        */
+
+        state = CTRLR_INITILIZED;
+        usart_send_direct("CTRLR_INITILIZED ok");
+    }
+    else if (state == CTRLR_INITILIZED)
+    {
+        const uint8_t _packet_id[] = {0xfa};
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_id, sizeof(_packet_id), _packet, 4);
+
+        usart_send_direct("CTRLR_PRESENT ok");
+        state = CTRLR_PRESENT;
+        dump_hex(_packet, 6);
+    }
+    else if (state == CTRLR_PRESENT)
+    {
+        const uint8_t _packet_read[] = {0x0};
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_read, sizeof(_packet_read), _packet, 6);
+        dump_hex(_packet, 6);
+    }
+    uart_flush();
 }
 
 int main()
@@ -82,17 +141,35 @@ int main()
     hw_led_off();
     usart_init();
     usart_send_str("========== start =========\r\n====================\r\n====================\r\n");
+    uart_flush();
 
     sns_init();
+    systick_iterrupt_init();
+    systick_interrupt_enable();
+
+    /*
+    sns_plug();
     uint8_t _packet[0x06] = {};
     while (1)
     {
-        usart_send_direct("sns_plug...");
-        sns_plug();
-        usart_send_direct("sns_plug ok");
+        //usart_send_direct("sns_plug...");
+        // usart_send_direct("sns_plug ok");
         sns_update(_packet);
-        dump_hex("snes", _packet);
-        uart_flush();
+        //dump_hex(_packet, 6);
+        
+        if (data ->button_a ) {
+            usart_send_direct("data ->button_a...");
+        }
+            uart_flush();
+    }
+    */
+    while (1)
+    {
+        snes_controller *data = (snes_controller *)_packet;
+        if (data->button_a)
+        {
+           // usart_send_direct("data ->button_a...");
+        }
     }
 }
 
@@ -974,7 +1051,7 @@ void handle_input_0x30()
     }
 }
 
-void sys_tick_handler(void)
+void usb_sys_tick_handler(void)
 {
 #if 1
     if (joyStickMode == 0x30)

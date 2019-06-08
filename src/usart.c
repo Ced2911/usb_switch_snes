@@ -10,7 +10,6 @@ static uint8_t *uart_current_ptr;
 
 void usart_init()
 {
-    rcc_periph_clock_enable(RCC_AFIO);
     rcc_periph_clock_enable(RCC_USART2);
 
     /* Setup GPIO pin GPIO_USART1_TX. */

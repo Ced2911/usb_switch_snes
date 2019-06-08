@@ -23,6 +23,8 @@ void hw_led_toggle()
 void hw_init()
 {
     rcc_clock_setup_in_hse_8mhz_out_72mhz();
+    
+    rcc_periph_clock_enable(RCC_AFIO);
 
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
@@ -33,7 +35,7 @@ void hw_init()
     gpio_clear(GPIOA, GPIO12);
 
     gpio_set_mode(GPIOB,
-                  GPIO_MODE_OUTPUT_10_MHZ,
+                  GPIO_MODE_OUTPUT_50_MHZ,
                   GPIO_CNF_OUTPUT_PUSHPULL,
                   GPIO12);
 
