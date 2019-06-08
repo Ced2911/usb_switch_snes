@@ -94,4 +94,7 @@ void sns_update(uint8_t *_packet)
 //power nc   data
 //clk   nc gpd
 //clk power  nc  data  gnd
+
+// ok
+// pb6 3v scl gnd
 #undef usart_send_direct
