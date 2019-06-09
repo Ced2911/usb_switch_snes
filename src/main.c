@@ -120,8 +120,11 @@ void sys_tick_handler(void)
     else if (state == CTRLR_PRESENT)
     {
         const uint8_t _packet_read[] = {0 };
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_read, sizeof(_packet_read), _packet, sizeof(_packet));
-        dump_hex(_packet, sizeof(_packet));
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, NULL, 0, _packet, sizeof(_packet));
+        //dump_hex(_packet, sizeof(_packet));
+
+        
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_read, sizeof(_packet_read), NULL, 0);
     }
     uart_flush();
 }
