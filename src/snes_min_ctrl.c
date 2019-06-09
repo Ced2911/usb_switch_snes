@@ -146,8 +146,8 @@ void sns_request(snes_i2c_state *controller)
             controller->packet[4] ^= 0xFF;
             controller->packet[5] ^= 0xFF;
 
-            dump_hex(controller->packet, 6);
-            uart_flush();
+            //dump_hex(controller->packet, 6);
+            //uart_flush();
         }
     }
 }

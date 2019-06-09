@@ -128,17 +128,17 @@ int main(void)
     uart_flush();
 
     sns_init(&controller_1);
+    
+    usb_setup();
     systick_iterrupt_init();
-    systick_interrupt_enable();
+
+    // systick_interrupt_enable();
 
     while (1)
     {
-        /*
-        if (controller_1.packet[5] == 0xef)
-        {
-            usart_send_direct("A");
-        }
-        */
+        handle_input_0x30();
+        usb_poll();
+        uart_flush();
     }
 
     return 0;
@@ -177,14 +177,10 @@ static int usbmain(void)
 }
 #endif
 
-//#define usart_send_str(...)
-
-//static uint8_t usb_out_buf[0x40];
 static uint8_t tick = 0;
-
 static void fill_input_report(struct ControllerData *controller_data)
 {
-#if 1
+#if 0
     static int x = 0;
     static int dir = 1;
     x += dir;
@@ -220,12 +216,19 @@ static void fill_input_report(struct ControllerData *controller_data)
     //controller_data->vibrator_input_report = 0x80;
     controller_data->vibrator_input_report = 0x07;
 #else
+/*
     unsigned char rawData[12] = {
         0x83, 0x71, 0x00, 0x80, 0x00, 0xBA, 0x07, 0x6B, 0x47, 0xF7, 0x72, 0x0C};
-    memcpy(controller_data, rawData, sizeof(rawData));
+        */
+    memcpy(controller_data, &switch_ctrl_1, sizeof(struct ControllerData));
+
+    
+    controller_data->timestamp = tick;
+    controller_data->battery_level = /*battery_level_charging | */ battery_level_full;
+    controller_data->connection_info = 0x1;
+    controller_data->vibrator_input_report = 0x07;
 
     tick += 3;
-    controller_data->timestamp = tick;
 #endif
 }
 
