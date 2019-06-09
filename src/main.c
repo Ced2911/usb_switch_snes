@@ -9,7 +9,6 @@
 #include <libopencm3/cm3/sync.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
-#include "snes_min_ctrl.h"
 #endif
 
 #include "compat.h"
@@ -18,6 +17,8 @@
 #include "usb_setup.h"
 #include "usart.h"
 #include "spi_func.h"
+#include "snes_min_ctrl.h"
+
 
 static const uint8_t mac_addr[0x06] = {0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
 
@@ -74,7 +75,7 @@ void dump_hex(const void *data, size_t size)
 #define SNES_TRI_R 0x0002
 #define SNES_TRI_L 0x0020
 
-#define SNES_START  0x0004
+#define SNES_START 0x0004
 #define SNES_SELECT 0x0010
 
 #ifndef TEST
@@ -90,6 +91,51 @@ void systick_iterrupt_init(void)
 }
 void usb_sys_tick_handler(void);
 
+static struct ControllerData switch_ctrl_1;
+
+void convert_snes_to_switch(bool isRight, snes_i2c_state *snes, struct ControllerData *switch_ctrl)
+{
+    uint16_t btn = *(uint16_t *)&snes->packet[4];
+    switch_ctrl->button_a = btn & SNES_BTN_A;
+    switch_ctrl->button_b = btn & SNES_BTN_B;
+    switch_ctrl->button_x = btn & SNES_BTN_X;
+    switch_ctrl->button_y = btn & SNES_BTN_Y;
+
+    switch_ctrl->dpad_up = btn & SNES_UP;
+    switch_ctrl->dpad_down = btn & SNES_DOWN;
+    switch_ctrl->dpad_right = btn & SNES_RIGHT;
+    switch_ctrl->dpad_left = btn & SNES_LEFT;
+
+    // joycon
+    /*
+    if (isRight)
+    {
+        switch_ctrl->button_minus = btn & SNES_START;
+        switch_ctrl->button_home = btn & SNES_SELECT;
+
+        switch_ctrl->button_right_sr = btn & SNES_TRI_R;
+        switch_ctrl->button_right_sl btn &SNES_TRI_L;
+    }
+    else
+    {
+        switch_ctrl->button_plus = btn & SNES_START;
+        switch_ctrl->button_capture = btn & SNES_SELECT;
+
+        switch_ctrl->button_left_sr = btn & SNES_TRI_R;
+        switch_ctrl->button_left_sl btn &SNES_TRI_L;
+    }
+*/
+    // pro
+    switch_ctrl->button_r = btn & SNES_TRI_R;
+    switch_ctrl->button_l= btn &SNES_TRI_L;
+    switch_ctrl->button_plus = btn & SNES_START;
+    switch_ctrl->button_home = btn & SNES_SELECT;
+
+    switch_ctrl->dpad_down = btn & SNES_DOWN;
+    switch_ctrl->dpad_right = btn & SNES_RIGHT;
+    switch_ctrl->dpad_left = btn & SNES_LEFT;
+}
+
 void sys_tick_handler(void)
 {
     static int n = 0;
@@ -102,8 +148,7 @@ void sys_tick_handler(void)
         break;
     case 1:
         sns_request(&controller_1);
-        uint16_t btn = *(uint16_t *)&controller_1.packet[4];
-        
+        convert_snes_to_switch(false, &controller_1, &switch_ctrl_1);
         break;
     case 2:
         usb_sys_tick_handler();
@@ -145,10 +190,12 @@ int main()
     */
     while (1)
     {
+        /*
         if (controller_1.packet[5] == 0xef)
         {
             usart_send_direct("A");
         }
+        */
     }
 }
 

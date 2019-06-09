@@ -17,8 +17,8 @@ enum
 #define USB_PID 0x2009
 //#define USB_PID 0x200e
 
-void usb_setup();
-void usb_poll();
+void usb_setup(void);
+void usb_poll(void);
 uint32_t usb_send_serial_data(void *buf, int len);
 uint16_t usb_write_packet(uint8_t ep, void * buf, uint16_t len);
 uint16_t usb_read_packet(uint8_t ep, void *buf, uint16_t len);
