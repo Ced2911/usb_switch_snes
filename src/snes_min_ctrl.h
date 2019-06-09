@@ -5,7 +5,6 @@
 
 #define NUNCHUK_DEVICE_ID 0x52
 
-
 #define CTRLR_UNINITILIZED 0
 #define CTRLR_PASS_1 1
 #define CTRLR_INITILIZED 2
@@ -51,38 +50,139 @@ void sns_init(snes_i2c_state *controller)
     i2c_peripheral_enable(controller->i2c);
 }
 
+#define I2C_TIMEOUT 1000
+
+
+#define I2C_CHECK_TIMEOUT(b) { \
+    uint32_t _timeout = I2C_TIMEOUT;  \
+    while(b) {  \
+        _timeout--;   \
+        if (_timeout == 0)   \
+        {   \
+            usart_send_direct("i2c_check_timeout timeout\n");   \
+            return;   \
+        }   \
+    }   \
+}
+
+static void i2c_write7_timeout(uint32_t i2c, int addr, uint8_t *data, size_t n)
+{
+
+    I2C_CHECK_TIMEOUT ((I2C_SR2(i2c) & I2C_SR2_BUSY));
+
+    i2c_send_start(i2c);
+
+    /* Wait for master mode selected */
+    I2C_CHECK_TIMEOUT (!((I2C_SR1(i2c) & I2C_SR1_SB) & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+    i2c_send_7bit_address(i2c, addr, I2C_WRITE);
+
+    /* Waiting for address is transferred. */
+    I2C_CHECK_TIMEOUT (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+    /* Clearing ADDR condition sequence. */
+    (void)I2C_SR2(i2c);
+
+    for (size_t i = 0; i < n; i++)
+    {
+        i2c_send_data(i2c, data[i]);
+        I2C_CHECK_TIMEOUT(!(I2C_SR1(i2c) & (I2C_SR1_BTF)));
+    }
+}
+
+static void i2c_read7_timeout(uint32_t i2c, int addr, uint8_t *res, size_t n)
+{
+    i2c_send_start(i2c);
+    i2c_enable_ack(i2c);
+
+    /* Wait for master mode selected */
+    I2C_CHECK_TIMEOUT (!((I2C_SR1(i2c) & I2C_SR1_SB) & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));        
+
+    i2c_send_7bit_address(i2c, addr, I2C_READ);
+
+    /* Waiting for address is transferred. */
+    I2C_CHECK_TIMEOUT (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+    /* Clearing ADDR condition sequence. */
+    (void)I2C_SR2(i2c);
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        if (i == n - 1)
+        {
+            i2c_disable_ack(i2c);
+        }
+        I2C_CHECK_TIMEOUT (!(I2C_SR1(i2c) & I2C_SR1_RxNE));
+        res[i] = i2c_get_data(i2c);
+    }
+    i2c_send_stop(i2c);
+
+    return;
+}
+
+
+/**
+ * Run a write/read transaction to a given 7bit i2c address
+ * If both write & read are provided, the read will use repeated start.
+ * Both write and read are optional
+ * There are likely still issues with repeated start/stop condtions!
+ * @param i2c peripheral of choice, eg I2C1
+ * @param addr 7 bit i2c device address
+ * @param w buffer of data to write
+ * @param wn length of w
+ * @param r destination buffer to read into
+ * @param rn number of bytes to read (r should be at least this long)
+ */
+static void i2c_transfer7_timeout(uint32_t i2c, uint8_t addr, uint8_t *w, size_t wn, uint8_t *r, size_t rn)
+{
+    if (wn)
+    {
+        i2c_write7_timeout(i2c, addr, w, wn);
+    }
+    if (rn)
+    {
+        i2c_read7_timeout(i2c, addr, r, rn);
+    }
+    else
+    {
+        i2c_send_stop(i2c);
+    }
+}
+
+//#define i2c_transfer7_timeout i2c_transfer7
+
 void sns_update(snes_i2c_state *controller)
 {
     if (controller->state == CTRLR_UNINITILIZED)
     {
-        i2c_transfer7(controller->i2c, NUNCHUK_DEVICE_ID, _packet_0a, sizeof(_packet_0a), NULL, 0);
+        i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, _packet_0a, sizeof(_packet_0a), NULL, 0);
 
         controller->state = CTRLR_PASS_1;
         usart_send_direct("CTRLR_PASS_1 ok");
     }
     if (controller->state == CTRLR_PASS_1)
     {
-        i2c_transfer7(controller->i2c, NUNCHUK_DEVICE_ID, _packet_0b, sizeof(_packet_0b), NULL, 0);
+        i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, _packet_0b, sizeof(_packet_0b), NULL, 0);
 
         controller->state = CTRLR_INITILIZED;
     }
     else if (controller->state == CTRLR_INITILIZED)
     {
-        i2c_transfer7(controller->i2c, NUNCHUK_DEVICE_ID, _packet_id, sizeof(_packet_id), controller->packet, 4);
+        i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, _packet_id, sizeof(_packet_id), controller->packet, 4);
 
         usart_send_direct("CTRLR_PRESENT ok");
         controller->state = CTRLR_PRESENT;
     }
     else if (controller->state == CTRLR_PRESENT)
     {
-        i2c_transfer7(controller->i2c, NUNCHUK_DEVICE_ID, NULL, 0, controller->packet, 6);
+        i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, NULL, 0, controller->packet, 6);
         // xor...
         controller->packet[4] ^= 0xFF;
         controller->packet[5] ^= 0xFF;
-        
+
         dump_hex(controller->packet, 6);
 
-        i2c_transfer7(controller->i2c, NUNCHUK_DEVICE_ID, _packet_read, sizeof(_packet_read), NULL, 0);
+        i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, _packet_read, sizeof(_packet_read), NULL, 0);
     }
     uart_flush();
 }
