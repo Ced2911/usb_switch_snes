@@ -77,12 +77,14 @@ void systick_iterrupt_init(void)
 }
 
 #define CTRLR_UNINITILIZED 0
-#define CTRLR_INITILIZED 1
-#define CTRLR_PRESENT 2
+#define CTRLR_PASS_1 1
+#define CTRLR_INITILIZED 2
+#define CTRLR_PRESENT 3
 
 uint8_t state = CTRLR_UNINITILIZED;
 
-uint8_t _packet[0x06] = {};
+uint8_t _packet[8] = {};
+
 void sys_tick_handler(void)
 {
     uint8_t buf[3] = {0, 0, 0};
@@ -92,27 +94,16 @@ void sys_tick_handler(void)
 
     if (state == CTRLR_UNINITILIZED)
     {
-
-        // init
         const uint8_t _packet_0a[] = {0xf0, 0x55};
-        const uint8_t _packet_0b[] = {0xfb, 0x00};
         i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0a, sizeof(_packet_0a), NULL, 0);
+
+        state = CTRLR_PASS_1;
+        usart_send_direct("CTRLR_PASS_1 ok");
+    }
+    if (state == CTRLR_PASS_1)
+    {
+        const uint8_t _packet_0b[] = {0xfb, 0x00};
         i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0b, sizeof(_packet_0b), NULL, 0);
-
-        /*
-        const uint8_t _packet_0c[] = {0xfe, 0x00};
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0c, sizeof(_packet_0c), NULL, 0);
-
-        // Disable encryption
-        const uint8_t _packet_01[] = {0xf0, 0xaa};
-        const uint8_t _packet_02[] = {0x40, 0, 0, 0, 0, 0, 0};
-        const uint8_t _packet_03[] = {0x40, 0, 0, 0, 0};
-
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_01, sizeof(_packet_01), NULL, 0);
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_02, sizeof(_packet_02), NULL, 0);
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_02, sizeof(_packet_02), NULL, 0);
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_03, sizeof(_packet_03), NULL, 0);
-        */
 
         state = CTRLR_INITILIZED;
         usart_send_direct("CTRLR_INITILIZED ok");
@@ -124,13 +115,13 @@ void sys_tick_handler(void)
 
         usart_send_direct("CTRLR_PRESENT ok");
         state = CTRLR_PRESENT;
-        dump_hex(_packet, 6);
+        dump_hex(_packet, 4);
     }
     else if (state == CTRLR_PRESENT)
     {
-        const uint8_t _packet_read[] = {0x0};
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_read, sizeof(_packet_read), _packet, 6);
-        dump_hex(_packet, 6);
+        const uint8_t _packet_read[] = {0 };
+        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_read, sizeof(_packet_read), _packet, sizeof(_packet));
+        dump_hex(_packet, sizeof(_packet));
     }
     uart_flush();
 }

@@ -87,7 +87,7 @@ void sns_update(uint8_t *_packet)
     usart_send_direct("sns_update _packet_0...");
     i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0, sizeof(_packet_0), NULL, 0);
     usart_send_direct("sns_update _packet...");
-    i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, NULL, 0, _packet, 6);
+    i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, NULL, 0, _packet, 8);
 }
 
 // pinout
