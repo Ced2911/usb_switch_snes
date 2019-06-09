@@ -60,6 +60,7 @@ void dump_hex(const void *data, size_t size)
     usart_send_str(ascii_buffer);
 #endif
 }
+
 //#define dump_hex(...)
 
 #define SNES_UP 0x0100
