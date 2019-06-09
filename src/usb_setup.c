@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/stm32/rcc.h>
@@ -422,11 +423,6 @@ static uint8_t usbd_control_buffer[128];
 
 char shared_buf[0x40] = {0};
 
-static void hid_out_complete(usbd_device *dev, struct usb_setup_data *req)
-{
-    memcpy(shared_buf, "hit\n", 4);
-}
-
 static enum usbd_request_return_codes vendor_control_request(
     usbd_device *dev,
     struct usb_setup_data *req,
@@ -443,9 +439,8 @@ static enum usbd_request_return_codes vendor_control_request(
         gpio_clear(GPIOB, GPIO12);
         return USBD_REQ_HANDLED;
     }
-
-    return USBD_REQ_NOTSUPP;
 #endif
+    return USBD_REQ_NOTSUPP;
 }
 
 static void hid_callback_complete(usbd_device * dev, struct usb_setup_data * data) {    
@@ -558,13 +553,12 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 
 #endif
 
-static void hid_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
+static void hid_data_rx_cb(usbd_device *_usbd_dev, uint8_t ep)
 {
     (void)ep;
-    (void)usbd_dev;
 
     uint8_t buf[0x40];
-    int len = usbd_ep_read_packet(usbd_dev, ENDPOINT_HID_OUT, buf, 0x40);
+    int len = usbd_ep_read_packet(_usbd_dev, ENDPOINT_HID_OUT, buf, 0x40);
     if (len)
     {
         hid_rx_cb(buf, len);

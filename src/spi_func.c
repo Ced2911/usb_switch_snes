@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include <usart.h>
+#include "usart.h"
 #include "spi_func.h"
 
 static const uint8_t spi0x2000[144] = {
@@ -47,11 +47,11 @@ void spi_read(uint16_t addr, uint8_t len, uint8_t *buffer)
     switch (addr & 0xF000)
     {
     case 0x6000:
-        data = &spi0x6000[addr & 0xFF];
+        data = (uint8_t *)&spi0x6000[addr & 0xFF];
         usart_send_str("Factory Configuration and Calibration");
         break;
     case 0x2000:
-        data = &spi0x2000[addr & 0x7F];
+        data = (uint8_t *)&spi0x2000[addr & 0x7F];
         usart_send_str("Paring info");
         break;
 

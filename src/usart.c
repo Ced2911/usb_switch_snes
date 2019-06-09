@@ -1,6 +1,8 @@
+#include <string.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/usart.h>
+#include "usart.h"
 
 #define UART_DBG 1
 
@@ -8,7 +10,7 @@
 static uint8_t uart_buffer[UART_BUFF_SIZE];
 static uint8_t *uart_current_ptr;
 
-void usart_init()
+void usart_init(void)
 {
     rcc_periph_clock_enable(RCC_USART2);
 
@@ -48,7 +50,7 @@ void usart_send_str(char *p)
 #endif
 }
 
-void uart_flush()
+void uart_flush(void)
 {
 #if UART_DBG
     char *ptr = (char *)uart_buffer;
