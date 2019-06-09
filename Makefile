@@ -2,13 +2,13 @@ PROJECT = awesomesauce
 BUILD_DIR = bin
 
 #SHARED_DIR = ../my-common-code
-CFILES = src/hwinit.c src/main.c src/spi_func.c src/usart.c src/usb_setup.c
+CFILES = src/hwinit.c src/main.c src/spi_func.c src/usart.c src/usb_setup.c  src/snes_min_ctrl.c
 #CFILES += api.c
 #AFILES += api-asm.S
 INCLUDES += -I src/
 
 #tmp...
-TGT_CFLAGS+=-Wno-missing-prototypes -Wno-unused-variable -Wno-missing-prototypes -Wno-unused-parameter
+TGT_CFLAGS+=-Wno-missing-prototypes -Wno-unused-variable -Wno-missing-prototypes -Wno-unused-parameter -Wno-missing-prototypes
 
 # TODO - you will need to edit these two lines!
 DEVICE=stm32f103c8

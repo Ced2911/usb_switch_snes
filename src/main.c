@@ -19,47 +19,7 @@
 #include "spi_func.h"
 #include "snes_min_ctrl.h"
 
-
 static const uint8_t mac_addr[0x06] = {0x57, 0x30, 0xea, 0x8a, 0xbb, 0x7c};
-
-static char ascii_buffer[0x100] = {};
-
-// #define usart_send_str(X)
-
-void dump_hex(const void *data, size_t size)
-{
-#if 1
-    char *ptr = ascii_buffer;
-    size_t i;
-    size = min(size, 0x100);
-    for (i = 0; i < size; ++i)
-    {
-        unsigned char b = ((unsigned char *)data)[i];
-        ptr += sprintf(ptr, "%02x ", b);
-    }
-
-    //usb_send_serial_data(ptr, ptr - ascii);
-    //usb_poll();
-    usart_send_str(ascii_buffer);
-#else
-    uint32_t *u32_data = (uint32_t *)data;
-    char *ptr = ascii_buffer;
-    size_t i;
-    size = min(size, 0x100) / sizeof(uint32_t);
-    for (i = 0; i < size; ++i)
-    {
-        ptr += sprintf(ptr, "0x%x,", u32_data[i]);
-    }
-
-    *ptr++ = '\r';
-    *ptr++ = '\n';
-    *ptr++ = 0;
-
-    //usb_send_serial_data(ptr, ptr - ascii);
-    //usb_poll();
-    usart_send_str(ascii_buffer);
-#endif
-}
 
 //#define dump_hex(...)
 
@@ -80,32 +40,30 @@ void dump_hex(const void *data, size_t size)
 #define SNES_SELECT 0x0010
 
 #ifndef TEST
-void handle_packet(void);
+static void handle_input_0x30(void);
 
-void handle_input_0x30(void);
-
-void systick_iterrupt_init(void)
+static void systick_iterrupt_init(void)
 {
     static int frequency = 60 * 4; // 4 callback, each every 60hz
     systick_set_frequency(60, rcc_ahb_frequency);
     systick_counter_enable();
 }
-void usb_sys_tick_handler(void);
+static void usb_sys_tick_handler(void);
 
 static struct ControllerData switch_ctrl_1;
 
-void convert_snes_to_switch(bool isRight, snes_i2c_state *snes, struct ControllerData *switch_ctrl)
+static void convert_snes_to_switch(bool isRight, snes_i2c_state *snes, struct ControllerData *switch_ctrl)
 {
     uint16_t btn = *(uint16_t *)&snes->packet[4];
-    switch_ctrl->button_a = btn & SNES_BTN_A;
-    switch_ctrl->button_b = btn & SNES_BTN_B;
-    switch_ctrl->button_x = btn & SNES_BTN_X;
-    switch_ctrl->button_y = btn & SNES_BTN_Y;
+    switch_ctrl->button_a = (btn & SNES_BTN_A) ? 1 : 0;
+    switch_ctrl->button_b = (btn & SNES_BTN_B) ? 1 : 0;
+    switch_ctrl->button_x = (btn & SNES_BTN_X) ? 1 : 0;
+    switch_ctrl->button_y = (btn & SNES_BTN_Y) ? 1 : 0;
 
-    switch_ctrl->dpad_up = btn & SNES_UP;
-    switch_ctrl->dpad_down = btn & SNES_DOWN;
-    switch_ctrl->dpad_right = btn & SNES_RIGHT;
-    switch_ctrl->dpad_left = btn & SNES_LEFT;
+    switch_ctrl->dpad_up = (btn & SNES_UP) ? 1 : 0;
+    switch_ctrl->dpad_down = (btn & SNES_DOWN) ? 1 : 0;
+    switch_ctrl->dpad_right = (btn & SNES_RIGHT) ? 1 : 0;
+    switch_ctrl->dpad_left = (btn & SNES_LEFT) ? 1 : 0;
 
     // joycon
     /*
@@ -127,14 +85,14 @@ void convert_snes_to_switch(bool isRight, snes_i2c_state *snes, struct Controlle
     }
 */
     // pro
-    switch_ctrl->button_r = btn & SNES_TRI_R;
-    switch_ctrl->button_l= btn &SNES_TRI_L;
-    switch_ctrl->button_plus = btn & SNES_START;
-    switch_ctrl->button_home = btn & SNES_SELECT;
+    switch_ctrl->button_r = (btn & SNES_TRI_R) ? 1 : 0;
+    switch_ctrl->button_l = (btn & SNES_TRI_L) ? 1 : 0;
+    switch_ctrl->button_plus = (btn & SNES_START) ? 1 : 0;
+    switch_ctrl->button_home = (btn & SNES_SELECT) ? 1 : 0;
 
-    switch_ctrl->dpad_down = btn & SNES_DOWN;
-    switch_ctrl->dpad_right = btn & SNES_RIGHT;
-    switch_ctrl->dpad_left = btn & SNES_LEFT;
+    switch_ctrl->dpad_down = (btn & SNES_DOWN) ? 1 : 0;
+    switch_ctrl->dpad_right = (btn & SNES_RIGHT) ? 1 : 0;
+    switch_ctrl->dpad_left = (btn & SNES_LEFT) ? 1 : 0;
 }
 
 void sys_tick_handler(void)
@@ -161,7 +119,7 @@ void sys_tick_handler(void)
     n++;
 }
 
-int main()
+int main(void)
 {
     hw_init();
     hw_led_off();
@@ -173,22 +131,6 @@ int main()
     systick_iterrupt_init();
     systick_interrupt_enable();
 
-    /*
-    sns_plug();
-    uint8_t _packet[0x06] = {};
-    while (1)
-    {
-        //usart_send_direct("sns_plug...");
-        // usart_send_direct("sns_plug ok");
-        sns_update(_packet);
-        //dump_hex(_packet, 6);
-        
-        if (data ->button_a ) {
-            usart_send_direct("data ->button_a...");
-        }
-            uart_flush();
-    }
-    */
     while (1)
     {
         /*
@@ -198,9 +140,11 @@ int main()
         }
         */
     }
+
+    return 0;
 }
 
-int usbmain(void)
+static int usbmain(void)
 {
     hw_init();
     hw_led_off();
@@ -224,11 +168,12 @@ int usbmain(void)
         usb_poll();
         // handle_packet();
 
-        sns_plug();
-        sns_update(_packet);
-        dump_hex("snes", _packet);
+        sns_poll(&controller_1);
+        sns_request(&controller_1);
         uart_flush();
     }
+
+    return 0;
 }
 #endif
 
@@ -237,7 +182,7 @@ int usbmain(void)
 //static uint8_t usb_out_buf[0x40];
 static uint8_t tick = 0;
 
-void fill_input_report(struct ControllerData *controller_data)
+static void fill_input_report(struct ControllerData *controller_data)
 {
 #if 1
     static int x = 0;
@@ -285,7 +230,7 @@ void fill_input_report(struct ControllerData *controller_data)
 }
 
 // Standard full mode - input reports with IMU data instead of subcommand replies. Pushes current state @60Hz, or @120Hz if Pro Controller.
-void input_report_0x30(uint8_t *usb_in, uint8_t *usb_out_buf)
+static void input_report_0x30(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     //usart_send_str(__func__);
     // report ID
@@ -305,31 +250,8 @@ void input_report_0x30(uint8_t *usb_in, uint8_t *usb_out_buf)
     hw_led_toggle();
 }
 
-// Subcommand 0x10: SPI flash read
-void input_sub_cmd_0x10(uint8_t *usb_in, uint8_t *usb_out_buf)
-{
-    usart_send_str(__func__);
-    struct SpiReadReport resp = {};
-    struct brcm_cmd_01 *spi_cmd = (struct brcm_cmd_01 *)&usb_in[kSubCmdOffset];
-
-    uint8_t len = spi_cmd->spi_data.size & 0x1D;
-    uint32_t offset = spi_cmd->spi_data.offset;
-
-    fill_input_report(&resp.controller_data);
-
-    usb_out_buf[0x00] = kReportIdInput21;
-
-    resp.subcommand_ack = 0x90;
-    resp.subcommand = 0x10;
-    resp.addr = offset;
-    resp.length = len;
-
-    memcpy(&usb_out_buf[1], &resp, sizeof(struct SpiReadReport));
-    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
-}
-
 // passthrough
-void output_passthrough(uint8_t *usb_in, uint8_t *usb_out_buf)
+static void output_passthrough(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     char dbg[0x40] = {};
     sprintf(dbg, "output_passthrough 0x%02x", usb_in[1]);
@@ -341,7 +263,7 @@ void output_passthrough(uint8_t *usb_in, uint8_t *usb_out_buf)
 }
 
 // 80 01
-void output_mac_addr(uint8_t *usb_in, uint8_t *usb_out_buf)
+static void output_mac_addr(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     /*
@@ -365,7 +287,7 @@ void output_mac_addr(uint8_t *usb_in, uint8_t *usb_out_buf)
 
 // passthrough
 // Verified
-void output_handshake(uint8_t *usb_in, uint8_t *usb_out_buf)
+static void output_handshake(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     memset(usb_out_buf, 0, 0x40);
@@ -376,7 +298,7 @@ void output_handshake(uint8_t *usb_in, uint8_t *usb_out_buf)
 
 // baudrate
 // Verified
-void output_baudrate(uint8_t *usb_in, uint8_t *usb_out_buf)
+static void output_baudrate(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     memset(usb_out_buf, 0, 0x40);
@@ -387,7 +309,7 @@ void output_baudrate(uint8_t *usb_in, uint8_t *usb_out_buf)
 
 // baudrate
 // Verified
-void output_enable_usb_timeout(uint8_t *usb_in, uint8_t *usb_out_buf)
+static void output_enable_usb_timeout(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     memset(usb_out_buf, 0, 0x40);
@@ -398,7 +320,7 @@ void output_enable_usb_timeout(uint8_t *usb_in, uint8_t *usb_out_buf)
 
 // baudrate
 // Verified
-void output_disable_usb_timeout(uint8_t *usb_in, uint8_t *usb_out_buf)
+static void output_disable_usb_timeout(uint8_t *usb_in, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     memset(usb_out_buf, 0, 0x40);
@@ -407,7 +329,7 @@ void output_disable_usb_timeout(uint8_t *usb_in, uint8_t *usb_out_buf)
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, 0x40);
 }
 
-void output_report_0x80(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x80(uint8_t *buf, uint8_t *usb_out_buf)
 {
     switch (buf[1])
     {
@@ -441,7 +363,7 @@ void output_report_0x80(uint8_t *buf, uint8_t *usb_out_buf)
 
 static uint8_t joyStickMode = 0;
 
-void output_report_0x01_unknown_subcmd(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_unknown_subcmd(uint8_t *buf, uint8_t *usb_out_buf)
 {
     // usart_send_str("output_report_0x01_unknown_subcmd");
     char dbg[0x40] = {};
@@ -458,7 +380,7 @@ void output_report_0x01_unknown_subcmd(uint8_t *buf, uint8_t *usb_out_buf)
 }
 
 // Subcommand 0x08: Set shipment low power state
-void output_report_0x01_0x08_lowpower_state(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_0x08_lowpower_state(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     unsigned char rawData[64] = {
@@ -494,7 +416,7 @@ void output_report_0x01_0x08_lowpower_state(uint8_t *buf, uint8_t *usb_out_buf)
 }
 
 // Subcommand 0x02: Request device info
-void output_report_0x01_get_device_info(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_get_device_info(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     unsigned char rawData[64] = {
@@ -513,7 +435,7 @@ void output_report_0x01_get_device_info(uint8_t *buf, uint8_t *usb_out_buf)
 
 // Subcommand 0x03: Set input report mode
 /* todo */
-void output_report_0x01_set_report_mode(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_set_report_mode(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
 #if 1
@@ -542,7 +464,7 @@ void output_report_0x01_set_report_mode(uint8_t *buf, uint8_t *usb_out_buf)
 
 // Subcommand 0x04: Trigger buttons elapsed time
 /* todo */
-void output_report_0x01_trigger_elapsed(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_trigger_elapsed(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct Report81Response *resp = (struct Report81Response *)&usb_out_buf[0x01];
@@ -561,11 +483,12 @@ void output_report_0x01_trigger_elapsed(uint8_t *buf, uint8_t *usb_out_buf)
         0x21, 0x0A, 0x8E, 0x84, 0x00, 0x12, 0x01, 0x18, 0x80, 0x01, 0x18, 0x80, 0x80,
         0x83, 0x04, 0x00, 0xCC, 0x00, 0xEE, 0x00, 0xFF, 0x00, 0x00, 0x00};
 
-    usb_write_packet(ENDPOINT_HID_IN, resp_, sizeof(resp_));
+    memcpy(usb_out_buf, resp_, 0x40);
+    usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, sizeof(resp_));
 }
 
 /* todo */
-void output_report_0x01_readspi(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_readspi(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
 
@@ -594,7 +517,7 @@ void output_report_0x01_readspi(uint8_t *buf, uint8_t *usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_writespi(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_writespi(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -611,7 +534,7 @@ void output_report_0x01_writespi(uint8_t *buf, uint8_t *usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_erasespi(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_erasespi(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -626,7 +549,7 @@ void output_report_0x01_erasespi(uint8_t *buf, uint8_t *usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_set_lights(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_set_lights(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -637,7 +560,7 @@ void output_report_0x01_set_lights(uint8_t *buf, uint8_t *usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_set_homelight(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_set_homelight(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -648,7 +571,7 @@ void output_report_0x01_set_homelight(uint8_t *buf, uint8_t *usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_set_immu(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_set_immu(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -659,7 +582,7 @@ void output_report_0x01_set_immu(uint8_t *buf, uint8_t *usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_set_immu_sensitivity(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_set_immu_sensitivity(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -670,7 +593,7 @@ void output_report_0x01_set_immu_sensitivity(uint8_t *buf, uint8_t *usb_out_buf)
 }
 
 /* todo */
-void output_report_0x01_set_vibration(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_set_vibration(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -686,7 +609,7 @@ void output_report_0x01_set_vibration(uint8_t *buf, uint8_t *usb_out_buf)
 
 #if 0
 /* todo */
-void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     struct ResponseX81 *resp = (struct ResponseX81 *)&usb_out_buf[0x01];
@@ -723,7 +646,7 @@ void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
     {
         /*
         // Ok
-        //*ptr =
+        // *ptr =
         *ptr++ = 0x01;
         *ptr++ = 0x01;
         memcpy(ptr, mac_addr, 6);
@@ -814,7 +737,7 @@ void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
 }
 #else
 
-void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
 {
     usart_send_str(__func__);
     const uint8_t data_01[] = {
@@ -921,7 +844,7 @@ void output_report_0x01_bt_pairing(uint8_t *buf, uint8_t *usb_out_buf)
 }
 #endif
 
-void output_report_0x10(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x10(uint8_t *buf, uint8_t *usb_out_buf)
 {
     /** nothing **/
     // Joy-con does not reply when Output Report is 0x10
@@ -931,7 +854,7 @@ void output_report_0x10(uint8_t *buf, uint8_t *usb_out_buf)
 }
 
 // Sub command !
-void output_report_0x01(uint8_t *buf, uint8_t *usb_out_buf)
+static void output_report_0x01(uint8_t *buf, uint8_t *usb_out_buf)
 {
     uint8_t subCmd = buf[10];
 
@@ -1000,7 +923,7 @@ volatile bool working = false;
 uint8_t last_usb_buf[0x40];
 volatile uint8_t usb_packet_flags = 0;
 
-void do_work(uint8_t *current_usb_buf, uint8_t len)
+static void do_work(uint8_t *current_usb_buf, uint8_t len)
 {
 
     uint8_t cmd = current_usb_buf[0];
@@ -1036,20 +959,6 @@ void do_work(uint8_t *current_usb_buf, uint8_t len)
     usart_send_str(" ===== ");
 }
 
-void handle_packet()
-{
-    // packet received handle it...
-    if (usb_packet_flags & 0x01)
-    {
-        usb_packet_flags = 0;
-
-        uint8_t current_usb_buf[0x40];
-        memcpy(current_usb_buf, last_usb_buf, 0x40);
-
-        do_work(current_usb_buf, 0x40);
-    }
-}
-
 void hid_rx_cb(uint8_t *buf, uint16_t len)
 {
     if (buf[0] != 0x00)
@@ -1058,7 +967,7 @@ void hid_rx_cb(uint8_t *buf, uint16_t len)
 
 static int sys_0x30 = 0;
 
-void handle_input_0x30()
+static void handle_input_0x30()
 {
 
     uint8_t usb_out_buf[0x40];
@@ -1069,7 +978,7 @@ void handle_input_0x30()
     }
 }
 
-void usb_sys_tick_handler(void)
+static void usb_sys_tick_handler(void)
 {
     if (joyStickMode == 0x30)
     {

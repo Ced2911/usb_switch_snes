@@ -1,4 +1,8 @@
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
+#include "compat.h"
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/usart.h>
@@ -31,7 +35,7 @@ void usart_init(void)
     uart_current_ptr = uart_buffer;
 }
 
-void usart_send_direct(char *p)
+void usart_send_direct(const char *p)
 {
     int len = strlen(p);
     // send uart
@@ -40,7 +44,7 @@ void usart_send_direct(char *p)
         usart_send_blocking(USART2, *p++);
     }
 }
-void usart_send_str(char *p)
+void usart_send_str(const char *p)
 {
 #if UART_DBG
     int len = strlen(p);
@@ -66,5 +70,45 @@ void uart_flush(void)
 
     // reset
     uart_current_ptr = uart_buffer;
+#endif
+}
+
+
+static char ascii_buffer[0x100] = {};
+
+// #define usart_send_str(X)
+
+void dump_hex(const void *data, size_t size)
+{
+#if 1
+    char *ptr = ascii_buffer;
+    size_t i;
+    size = min(size, 0x100);
+    for (i = 0; i < size; ++i)
+    {
+        unsigned char b = ((unsigned char *)data)[i];
+        ptr += sprintf(ptr, "%02x ", b);
+    }
+
+    //usb_send_serial_data(ptr, ptr - ascii);
+    //usb_poll();
+    usart_send_str(ascii_buffer);
+#else
+    uint32_t *u32_data = (uint32_t *)data;
+    char *ptr = ascii_buffer;
+    size_t i;
+    size = min(size, 0x100) / sizeof(uint32_t);
+    for (i = 0; i < size; ++i)
+    {
+        ptr += sprintf(ptr, "0x%x,", u32_data[i]);
+    }
+
+    *ptr++ = '\r';
+    *ptr++ = '\n';
+    *ptr++ = 0;
+
+    //usb_send_serial_data(ptr, ptr - ascii);
+    //usb_poll();
+    usart_send_str(ascii_buffer);
 #endif
 }
