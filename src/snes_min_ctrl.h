@@ -5,89 +5,86 @@
 
 #define NUNCHUK_DEVICE_ID 0x52
 
-#define I2C_N I2C1
+
+#define CTRLR_UNINITILIZED 0
+#define CTRLR_PASS_1 1
+#define CTRLR_INITILIZED 2
+#define CTRLR_PRESENT 3
 
 typedef struct
 {
-    uint8_t left_stick_x : 6;
-    uint8_t right_stick_x1 : 2;
+    uint32_t i2c;
+    uint16_t clk;
+    uint16_t gpios;
+    uint8_t state;
+    uint8_t packet[8];
+} snes_i2c_state;
 
-    uint8_t left_stick_y : 6;
-    uint8_t right_stick_x2 : 2;
+static snes_i2c_state controller_1 = {
+    .i2c = I2C1,
+    .clk = RCC_I2C1,
+    .gpios = GPIO_I2C1_SCL | GPIO_I2C1_SDA,
+    .state = CTRLR_UNINITILIZED};
 
-    uint8_t right_stick_y : 5;
-    uint8_t left_trigger1 : 2;
-    uint8_t right_stick_x3 : 1;
+static snes_i2c_state controller_2 = {
+    .i2c = I2C2,
+    .clk = RCC_I2C2,
+    .gpios = GPIO_I2C2_SCL | GPIO_I2C2_SDA,
+    .state = CTRLR_UNINITILIZED};
 
-    uint8_t right_trigger : 5;
-    uint8_t left_trigger2 : 3;
+static const uint8_t _packet_0a[] = {0xf0, 0x55};
+static const uint8_t _packet_0b[] = {0xfb, 0x00};
+static const uint8_t _packet_id[] = {0xfa};
+static const uint8_t _packet_read[] = {0};
 
-    uint8_t dummy : 1; // bit is always set?
-    uint8_t button_right_trigger : 1;
-    uint8_t button_plus : 1;
-    uint8_t button_home : 1;
-    uint8_t button_minus : 1;
-    uint8_t button_left_trigger : 1;
-    uint8_t button_down : 1;
-    uint8_t button_right : 1;
-
-    uint8_t button_up : 1;
-    uint8_t button_left : 1;
-    uint8_t button_zr : 1;
-    uint8_t button_x : 1;
-    uint8_t button_a : 1;
-    uint8_t button_y : 1;
-    uint8_t button_b : 1;
-    uint8_t button_zl : 1;
-} snes_controller;
-
-#define usart_send_direct
-void sns_init()
+void sns_init(snes_i2c_state *controller)
 {
-    usart_send_direct("sns_init..");
-    rcc_periph_clock_enable(RCC_I2C1);
+    rcc_periph_clock_enable(controller->clk);
 
     gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
                   GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN,
-                  GPIO_I2C1_SCL | GPIO_I2C1_SDA);
+                  controller->gpios);
 
-    i2c_reset(I2C1);
-    i2c_peripheral_disable(I2C_N);
-    // i2c_set_own_7bit_slave_address(I2C_N, 0x29);
-    i2c_set_speed(I2C_N, i2c_speed_fm_400k, rcc_apb1_frequency / 1e6);
-    i2c_peripheral_enable(I2C_N);
-    usart_send_direct("sns_init ok");
+    i2c_reset(controller->i2c);
+    i2c_peripheral_disable(controller->i2c);
+    i2c_set_speed(controller->i2c, i2c_speed_fm_400k, rcc_apb1_frequency / 1e6);
+    i2c_peripheral_enable(controller->i2c);
 }
 
-void sns_plug()
+void sns_update(snes_i2c_state *controller)
 {
-    usart_send_direct("sns_plug _packet_0...");
-    uint8_t _packet_0[] = {0xF0, 0x55};
-    i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0, sizeof(_packet_0), NULL, 0);
+    if (controller->state == CTRLR_UNINITILIZED)
+    {
+        i2c_transfer7(controller->i2c, NUNCHUK_DEVICE_ID, _packet_0a, sizeof(_packet_0a), NULL, 0);
 
-    usart_send_direct("sns_plug _packet_1...");
-    uint8_t _packet_1[] = {0xFB, 0x00};
-    i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_1, sizeof(_packet_1), NULL, 0);
+        controller->state = CTRLR_PASS_1;
+        usart_send_direct("CTRLR_PASS_1 ok");
+    }
+    if (controller->state == CTRLR_PASS_1)
+    {
+        i2c_transfer7(controller->i2c, NUNCHUK_DEVICE_ID, _packet_0b, sizeof(_packet_0b), NULL, 0);
 
-    // Get id !
-    usart_send_direct("sns_plug _packet_2...");
-    uint8_t _packet_2[] = {0xFA};
-    i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_2, sizeof(_packet_2), NULL, 0);
+        controller->state = CTRLR_INITILIZED;
+    }
+    else if (controller->state == CTRLR_INITILIZED)
+    {
+        i2c_transfer7(controller->i2c, NUNCHUK_DEVICE_ID, _packet_id, sizeof(_packet_id), controller->packet, 4);
 
-    usart_send_direct("sns_plug _packet_id...");
-    uint8_t _packet_id[4] = {0};
-    i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, NULL, 0, _packet_id, sizeof(_packet_id));
+        usart_send_direct("CTRLR_PRESENT ok");
+        controller->state = CTRLR_PRESENT;
+    }
+    else if (controller->state == CTRLR_PRESENT)
+    {
+        i2c_transfer7(controller->i2c, NUNCHUK_DEVICE_ID, NULL, 0, controller->packet, 6);
+        // xor...
+        controller->packet[4] ^= 0xFF;
+        controller->packet[5] ^= 0xFF;
+        
+        dump_hex(controller->packet, 6);
 
-    dump_hex(_packet_id, sizeof(_packet_id));
-}
-
-void sns_update(uint8_t *_packet)
-{
-    uint8_t _packet_0[] = {0};
-    usart_send_direct("sns_update _packet_0...");
-    i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0, sizeof(_packet_0), NULL, 0);
-    usart_send_direct("sns_update _packet...");
-    i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, NULL, 0, _packet, 8);
+        i2c_transfer7(controller->i2c, NUNCHUK_DEVICE_ID, _packet_read, sizeof(_packet_read), NULL, 0);
+    }
+    uart_flush();
 }
 
 // pinout
@@ -97,4 +94,3 @@ void sns_update(uint8_t *_packet)
 
 // ok
 // pb6 3v scl gnd
-#undef usart_send_direct

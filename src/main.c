@@ -76,57 +76,9 @@ void systick_iterrupt_init(void)
     systick_counter_enable();
 }
 
-#define CTRLR_UNINITILIZED 0
-#define CTRLR_PASS_1 1
-#define CTRLR_INITILIZED 2
-#define CTRLR_PRESENT 3
-
-uint8_t state = CTRLR_UNINITILIZED;
-
-uint8_t _packet[8] = {};
-
 void sys_tick_handler(void)
 {
-    uint8_t buf[3] = {0, 0, 0};
-    buf[0] = 0;
-    buf[1] = 0;
-    buf[2] = 0;
-
-    if (state == CTRLR_UNINITILIZED)
-    {
-        const uint8_t _packet_0a[] = {0xf0, 0x55};
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0a, sizeof(_packet_0a), NULL, 0);
-
-        state = CTRLR_PASS_1;
-        usart_send_direct("CTRLR_PASS_1 ok");
-    }
-    if (state == CTRLR_PASS_1)
-    {
-        const uint8_t _packet_0b[] = {0xfb, 0x00};
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_0b, sizeof(_packet_0b), NULL, 0);
-
-        state = CTRLR_INITILIZED;
-        usart_send_direct("CTRLR_INITILIZED ok");
-    }
-    else if (state == CTRLR_INITILIZED)
-    {
-        const uint8_t _packet_id[] = {0xfa};
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_id, sizeof(_packet_id), _packet, 4);
-
-        usart_send_direct("CTRLR_PRESENT ok");
-        state = CTRLR_PRESENT;
-        dump_hex(_packet, 4);
-    }
-    else if (state == CTRLR_PRESENT)
-    {
-        const uint8_t _packet_read[] = {0 };
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, NULL, 0, _packet, sizeof(_packet));
-        //dump_hex(_packet, sizeof(_packet));
-
-        
-        i2c_transfer7(I2C_N, NUNCHUK_DEVICE_ID, _packet_read, sizeof(_packet_read), NULL, 0);
-    }
-    uart_flush();
+    sns_update(&controller_1);
 }
 
 int main()
@@ -137,7 +89,7 @@ int main()
     usart_send_str("========== start =========\r\n====================\r\n====================\r\n");
     uart_flush();
 
-    sns_init();
+    sns_init(&controller_1);
     systick_iterrupt_init();
     systick_interrupt_enable();
 
@@ -159,11 +111,10 @@ int main()
     */
     while (1)
     {
-        snes_controller *data = (snes_controller *)_packet;
-        if (data->button_a)
-        {
-           // usart_send_direct("data ->button_a...");
+        if (controller_1.packet[5] == 0xef) {
+            usart_send_direct("A");
         }
+       
     }
 }
 
@@ -181,7 +132,7 @@ int usbmain(void)
 
     hw_led_on();
 
-    sns_init();
+    sns_init(&controller_1);
 
     uint8_t _packet[0x06] = {};
 
