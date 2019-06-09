@@ -62,23 +62,39 @@ void dump_hex(const void *data, size_t size)
 //#define dump_hex(...)
 
 #ifndef TEST
-void handle_packet();
+void handle_packet(void);
 
-void handle_input_0x30();
+void handle_input_0x30(void);
 
 void systick_iterrupt_init(void)
 {
-
-    //systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-    /* SysTick interrupt every N clock pulses: set reload to N-1 */
-    //systick_set_reload(((9000000 / 9000) * 15) - 1); // 15 ms ?
+    static int frequency = 60 * 4; // 4 callback, each every 60hz
     systick_set_frequency(60, rcc_ahb_frequency);
     systick_counter_enable();
 }
+void usb_sys_tick_handler(void);
 
 void sys_tick_handler(void)
 {
-    sns_update(&controller_1);
+    static int n = 0;
+
+    int l = n & 0x3;
+    switch (l)
+    {
+    case 0:
+        sns_poll(&controller_1);
+        break;
+    case 1:
+        sns_request(&controller_1);
+        break;
+    case 2:
+        usb_sys_tick_handler();
+        break;
+    case 3:
+    default:
+        break;
+    }
+    n++;
 }
 
 int main()
@@ -111,10 +127,10 @@ int main()
     */
     while (1)
     {
-        if (controller_1.packet[5] == 0xef) {
+        if (controller_1.packet[5] == 0xef)
+        {
             usart_send_direct("A");
         }
-       
     }
 }
 
@@ -962,9 +978,7 @@ void handle_packet()
         usb_packet_flags = 0;
 
         uint8_t current_usb_buf[0x40];
-        mlock();
         memcpy(current_usb_buf, last_usb_buf, 0x40);
-        munlock();
 
         do_work(current_usb_buf, 0x40);
     }
@@ -972,15 +986,8 @@ void handle_packet()
 
 void hid_rx_cb(uint8_t *buf, uint16_t len)
 {
-#if 0
-    mlock();
-    memcpy(last_usb_buf, buf, len);
-    usb_packet_flags = 0x01;
-    munlock();
-#else
     if (buf[0] != 0x00)
         do_work(buf, len);
-#endif
 }
 
 static int sys_0x30 = 0;
@@ -998,15 +1005,8 @@ void handle_input_0x30()
 
 void usb_sys_tick_handler(void)
 {
-#if 1
     if (joyStickMode == 0x30)
     {
         sys_0x30 = 1;
     }
-#else
-    mlock();
-    last_usb_buf[0] = 0x30;
-    usb_packet_flags = 0x01;
-    munlock();
-#endif
 }
