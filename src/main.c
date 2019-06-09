@@ -61,6 +61,22 @@ void dump_hex(const void *data, size_t size)
 }
 //#define dump_hex(...)
 
+#define SNES_UP 0x0100
+#define SNES_LEFT 0x0200
+#define SNES_DOWN 0x0040
+#define SNES_RIGHT 0x0080
+
+#define SNES_BTN_X 0x0800
+#define SNES_BTN_A 0x1000
+#define SNES_BTN_Y 0x2000
+#define SNES_BTN_B 0x4000
+
+#define SNES_TRI_R 0x0002
+#define SNES_TRI_L 0x0020
+
+#define SNES_START  0x0004
+#define SNES_SELECT 0x0010
+
 #ifndef TEST
 void handle_packet(void);
 
@@ -86,6 +102,8 @@ void sys_tick_handler(void)
         break;
     case 1:
         sns_request(&controller_1);
+        uint16_t btn = *(uint16_t *)&controller_1.packet[4];
+        
         break;
     case 2:
         usb_sys_tick_handler();
