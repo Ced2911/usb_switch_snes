@@ -65,34 +65,37 @@ static void convert_snes_to_switch(bool isRight, snes_i2c_state *snes, struct Co
     switch_ctrl->dpad_right = (btn & SNES_RIGHT) ? 1 : 0;
     switch_ctrl->dpad_left = (btn & SNES_LEFT) ? 1 : 0;
 
+#if 0
     // joycon
-    /*
     if (isRight)
     {
-        switch_ctrl->button_minus = btn & SNES_START;
-        switch_ctrl->button_home = btn & SNES_SELECT;
+        switch_ctrl->button_minus = (btn & SNES_START) ? 1 : 0;
+        switch_ctrl->button_home = (btn & SNES_SELECT) ? 1 : 0;
 
-        switch_ctrl->button_right_sr = btn & SNES_TRI_R;
-        switch_ctrl->button_right_sl btn &SNES_TRI_L;
+        switch_ctrl->button_right_sr = (btn & SNES_TRI_R) ? 1 : 0;
+        switch_ctrl->button_right_sl = (btn & SNES_TRI_L) ? 1 : 0;
+
+        switch_ctrl->button_left_sr = (btn & SNES_TRI_R) ? 1 : 0;
+        switch_ctrl->button_left_sl = (btn & SNES_TRI_L) ? 1 : 0;
     }
     else
     {
-        switch_ctrl->button_plus = btn & SNES_START;
-        switch_ctrl->button_capture = btn & SNES_SELECT;
+        switch_ctrl->button_plus = (btn & SNES_START) ? 1 : 0;
+        switch_ctrl->button_capture = (btn & SNES_SELECT) ? 1 : 0;
 
-        switch_ctrl->button_left_sr = btn & SNES_TRI_R;
-        switch_ctrl->button_left_sl btn &SNES_TRI_L;
+        switch_ctrl->button_right_sr = (btn & SNES_TRI_R) ? 1 : 0;
+        switch_ctrl->button_right_sl = (btn & SNES_TRI_L) ? 1 : 0;
+
+        switch_ctrl->button_left_sr = (btn & SNES_TRI_R) ? 1 : 0;
+        switch_ctrl->button_left_sl = (btn & SNES_TRI_L) ? 1 : 0;
     }
-*/
+#else
     // pro
     switch_ctrl->button_r = (btn & SNES_TRI_R) ? 1 : 0;
     switch_ctrl->button_l = (btn & SNES_TRI_L) ? 1 : 0;
     switch_ctrl->button_plus = (btn & SNES_START) ? 1 : 0;
     switch_ctrl->button_home = (btn & SNES_SELECT) ? 1 : 0;
-
-    switch_ctrl->dpad_down = (btn & SNES_DOWN) ? 1 : 0;
-    switch_ctrl->dpad_right = (btn & SNES_RIGHT) ? 1 : 0;
-    switch_ctrl->dpad_left = (btn & SNES_LEFT) ? 1 : 0;
+#endif
 }
 
 void sys_tick_handler(void)
@@ -103,10 +106,16 @@ void sys_tick_handler(void)
     switch (l)
     {
     case 0:
+        usart_send_direct("controller_1 poll\n");
         sns_poll(&controller_1);
+        usart_send_direct("controller_2 poll\n");
+        sns_poll(&controller_2);
         break;
     case 1:
+        usart_send_direct("controller_1 req\n");
         sns_request(&controller_1);
+        usart_send_direct("controller_2 req\n");
+        sns_request(&controller_2);
         convert_snes_to_switch(false, &controller_1, &switch_ctrl_1);
         break;
     case 2:
@@ -128,17 +137,18 @@ int main(void)
     uart_flush();
 
     sns_init(&controller_1);
-    
-    usb_setup();
+    sns_init(&controller_2);
+
+    //usb_setup();
     systick_iterrupt_init();
 
-    // systick_interrupt_enable();
+    systick_interrupt_enable();
 
     while (1)
     {
-        handle_input_0x30();
-        usb_poll();
-        uart_flush();
+        //handle_input_0x30();
+        //usb_poll();
+        //uart_flush();
     }
 
     return 0;
@@ -216,16 +226,15 @@ static void fill_input_report(struct ControllerData *controller_data)
     //controller_data->vibrator_input_report = 0x80;
     controller_data->vibrator_input_report = 0x07;
 #else
-/*
+    /*
     unsigned char rawData[12] = {
         0x83, 0x71, 0x00, 0x80, 0x00, 0xBA, 0x07, 0x6B, 0x47, 0xF7, 0x72, 0x0C};
         */
     memcpy(controller_data, &switch_ctrl_1, sizeof(struct ControllerData));
 
-    
     controller_data->timestamp = tick;
     controller_data->battery_level = /*battery_level_charging | */ battery_level_full;
-    controller_data->connection_info = 0x1;
+    controller_data->connection_info = /* 0xe; */ 0x1;
     controller_data->vibrator_input_report = 0x07;
 
     tick += 3;
@@ -486,7 +495,7 @@ static void output_report_0x01_trigger_elapsed(uint8_t *buf, uint8_t *usb_out_bu
         0x21, 0x0A, 0x8E, 0x84, 0x00, 0x12, 0x01, 0x18, 0x80, 0x01, 0x18, 0x80, 0x80,
         0x83, 0x04, 0x00, 0xCC, 0x00, 0xEE, 0x00, 0xFF, 0x00, 0x00, 0x00};
 
-    memcpy(usb_out_buf, resp_, 0x40);
+    memcpy(usb_out_buf, resp_, sizeof(resp_));
     usb_write_packet(ENDPOINT_HID_IN, usb_out_buf, sizeof(resp_));
 }
 

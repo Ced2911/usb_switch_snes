@@ -1,7 +1,6 @@
 #include "snes_min_ctrl.h"
 #include "usart.h"
 
-
 #define I2C_CHECK_TIMEOUT(b)                                      \
     {                                                             \
         uint32_t _timeout = I2C_TIMEOUT;                          \
@@ -22,17 +21,18 @@ static const uint8_t _packet_id[] = {0xfa};
 static const uint8_t _packet_read[] = {0};
 
 snes_i2c_state controller_1 = {
+    .id = 1,
     .i2c = I2C1,
     .clk = RCC_I2C1,
     .gpios = GPIO_I2C1_SCL | GPIO_I2C1_SDA,
     .state = CTRLR_UNINITILIZED};
 
 snes_i2c_state controller_2 = {
+    .id = 2,
     .i2c = I2C2,
     .clk = RCC_I2C2,
     .gpios = GPIO_I2C2_SCL | GPIO_I2C2_SDA,
     .state = CTRLR_UNINITILIZED};
-
 
 static int i2c_write7_timeout(uint32_t i2c, int addr, uint8_t *data, size_t n)
 {
@@ -115,7 +115,6 @@ static int i2c_transfer7_timeout(uint32_t i2c, uint8_t addr, uint8_t *w, size_t 
     return 0;
 }
 
-
 void sns_init(snes_i2c_state *controller)
 {
     rcc_periph_clock_enable(controller->clk);
@@ -146,8 +145,8 @@ void sns_request(snes_i2c_state *controller)
             controller->packet[4] ^= 0xFF;
             controller->packet[5] ^= 0xFF;
 
-            //dump_hex(controller->packet, 6);
-            //uart_flush();
+            dump_hex(controller->packet, 6);
+            uart_flush();
         }
     }
 }
@@ -157,23 +156,27 @@ void sns_poll(snes_i2c_state *controller)
     switch (controller->state)
     {
     case CTRLR_UNINITILIZED:
-        if (i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, (uint8_t*)_packet_0a, sizeof(_packet_0a), NULL, 0) != ERR_TIMEOUT)
-        {
+        usart_send_direct("CTRLR_UNINITILIZED\n");
+        if (i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, (uint8_t *)_packet_0a, sizeof(_packet_0a), NULL, 0) != ERR_TIMEOUT)
             controller->state = CTRLR_PASS_1;
-        }
         break;
     case CTRLR_PASS_1:
         usart_send_direct("CTRLR_PASS_1\n");
-        if (i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, (uint8_t*)_packet_0b, sizeof(_packet_0b), NULL, 0) != ERR_TIMEOUT)
+        if (i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, (uint8_t *)_packet_0b, sizeof(_packet_0b), NULL, 0) != ERR_TIMEOUT)
             controller->state = CTRLR_INITILIZED;
         break;
     case CTRLR_INITILIZED:
         usart_send_direct("CTRLR_INITILIZED\n");
-        if (i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, (uint8_t*)_packet_id, sizeof(_packet_id), controller->packet, 4) != ERR_TIMEOUT)
+        if (i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, (uint8_t *)_packet_id, sizeof(_packet_id), controller->packet, 4) != ERR_TIMEOUT)
             controller->state = CTRLR_PRESENT;
         break;
     case CTRLR_PRESENT:
-        i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, (uint8_t*)_packet_read, sizeof(_packet_read), NULL, 0);
+        usart_send_direct("CTRLR_PRESENT\n");
+        i2c_transfer7_timeout(controller->i2c, NUNCHUK_DEVICE_ID, (uint8_t *)_packet_read, sizeof(_packet_read), NULL, 0);
+        break;
+    case CTRLR_TIMEOUT:
+        usart_send_direct("CTRLR_TIMEOUT\n");
+        controller->state = CTRLR_UNINITILIZED;
         break;
     }
 }

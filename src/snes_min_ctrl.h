@@ -20,6 +20,7 @@ enum
 
 typedef struct
 {
+    uint8_t id;
     uint32_t i2c;
     uint16_t clk;
     uint16_t gpios;

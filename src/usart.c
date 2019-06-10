@@ -90,7 +90,7 @@ void dump_hex(const void *data, size_t size)
         ptr += sprintf(ptr, "%02x ", b);
     }
 
-    //usb_send_serial_data(ptr, ptr - ascii);
+    //usb_send_serial_data(ascii_buffer);
     //usb_poll();
     usart_send_str(ascii_buffer);
 #else
